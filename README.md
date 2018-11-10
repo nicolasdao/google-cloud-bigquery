@@ -53,6 +53,10 @@ client.table.loadData.fromStorage({
 .then(res => {
 	console.log('YES')
 	console.log(JSON.stringify(res, null, ' '))
+	return client.job.get(res.data.jobReference).then(res => {
+		console.log('INFO ABOUT THE JOB:')
+		console.log(JSON.stringify(res, null, ' '))
+	})
 })
 .catch(err => {
 	console.log('NO')
@@ -69,12 +73,19 @@ client.table.create.fromStorage({
 .then(res => {
 	console.log('YES')
 	console.log(JSON.stringify(res, null, ' '))
+	return client.job.get(res.data.jobReference).then(res => {
+		console.log('INFO ABOUT THE JOB:')
+		console.log(JSON.stringify(res, null, ' '))
+	})
 })
 .catch(err => {
 	console.log('NO')
 	console.log(`${err.message}\n${err.stack}`)
 })
 ```
+
+> Notice the usage of the `client.job.get` to check the status of the job. The signature of that api is as follow:
+>	`client.job.get({ projectId: 'your-project-id', location: 'asia-northeast1', jobId: 'a-job-id' })`
 
 # This Is What We re Up To
 We are Neap, an Australian Technology consultancy powering the startup ecosystem in Sydney. We simply love building Tech and also meeting new people, so don't hesitate to connect with us at [https://neap.co](https://neap.co).

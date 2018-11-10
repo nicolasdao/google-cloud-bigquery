@@ -83,8 +83,8 @@ const _dealWithError = (res, projectId) => {
 	return res
 }
 
-const getJob = (projectId, locationId, queryId, token) => fetch.get(
-	BIGQUERY_JOB_URL(projectId, locationId, queryId), {
+const getJob = (projectId, locationId, jobId, token) => fetch.get(
+	BIGQUERY_JOB_URL(projectId, locationId, jobId), {
 		'Content-Type': 'application/json',
 		Authorization: `Bearer ${token}`
 	})
@@ -107,7 +107,7 @@ const createClient = ({ jsonKeyFile }) => {
 			}
 		},
 		job: {
-			'get': (projectId, locationId, queryId) => getToken(auth).then(token => getJob(projectId, locationId, queryId, token))
+			'get': ({ projectId, location, jobId }) => getToken(auth).then(token => getJob(projectId, location, jobId, token))
 		}
 	}
 }
