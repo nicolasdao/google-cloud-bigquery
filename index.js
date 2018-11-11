@@ -112,7 +112,12 @@ const createClient = ({ jsonKeyFile }) => {
 	}
 }
 
-module.exports = createClient
+module.exports = {
+	format: require('./src/format'),
+	client: {
+		new: createClient
+	}
+}
 
 
 
