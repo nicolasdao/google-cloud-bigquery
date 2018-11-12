@@ -1,6 +1,6 @@
 {
   "name": "google-cloud-bigquery",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "description": "Node.js package to create BigQuery table from Google Cloud Storage or load data into Google Cloud BigQuery tables including automatically updating the tables' schema.",
   "main": "index.js",
   "repository": {

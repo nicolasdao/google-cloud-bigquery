@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.1.4"></a>
+## [0.1.4](https://github.com/nicolasdao/google-cloud-bigquery/compare/v0.1.2...v0.1.4) (2018-11-12)
+
+
+### Bug Fixes
+
+* Loading data to BigQuery table does not ignore bad data ([6e5d32d](https://github.com/nicolasdao/google-cloud-bigquery/commit/6e5d32d))
+
+
+
 <a name="0.1.2"></a>
 ## [0.1.2](https://github.com/nicolasdao/google-cloud-bigquery/compare/v0.1.1...v0.1.2) (2018-11-12)
 
