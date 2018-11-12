@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.1.2"></a>
+## [0.1.2](https://github.com/nicolasdao/google-cloud-bigquery/compare/v0.1.1...v0.1.2) (2018-11-12)
+
+
+### Bug Fixes
+
+* The string type does not always yield a string type once loaded to a BigQuery table ([84d755a](https://github.com/nicolasdao/google-cloud-bigquery/commit/84d755a))
+
+
+
 <a name="0.1.1"></a>
 ## [0.1.1](https://github.com/nicolasdao/google-cloud-bigquery/compare/v0.1.0...v0.1.1) (2018-11-12)
 
