@@ -36,6 +36,7 @@ const loadData = (projectId, db, table, sources=[], token) => Promise.resolve(nu
 				},
 				schemaUpdateOptions: ['ALLOW_FIELD_ADDITION', 'ALLOW_FIELD_RELAXATION'],
 				ignoreUnknownValues: true,
+				maxBadRecords: 10000,
 				allowJaggedRows: true,
 				writeDisposition: 'WRITE_APPEND', 				
 				sourceFormat: 'NEWLINE_DELIMITED_JSON',
@@ -63,7 +64,7 @@ const createTable = (projectId, db, table, sources=[], token) => Promise.resolve
 				schemaUpdateOptions: ['ALLOW_FIELD_ADDITION'],
 				writeDisposition: 'WRITE_APPEND', // 
 				ignoreUnknownValues: false,
-				maxBadRecords: 1000000,
+				maxBadRecords: 10000,
 				sourceFormat: 'NEWLINE_DELIMITED_JSON',
 				sourceUris: sources.map(s => `gs://${s}`)
 			}
