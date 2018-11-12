@@ -71,10 +71,11 @@ describe('format', () => {
 				friends: [{
 					name: 'string',
 					age: 'number',
-					dob: 'string',
+					dob: 'timestamp',
 					married: 'boolean'
 				}],
-				tags: ['string']
+				tags: ['string'],
+				note: 'string'
 			}
 			const obj_01 = {
 				id: '123',
@@ -99,10 +100,11 @@ describe('format', () => {
 			assert.equal(newObj_01.friends[0]._isNull, true, '10')
 			assert.equal(newObj_01.friends[0].name, 'string:NULL', '11')
 			assert.equal(newObj_01.friends[0].age, -1, '12')
-			assert.equal(newObj_01.friends[0].dob, 'string:NULL', '13')
+			assert.equal(newObj_01.friends[0].dob, '1970-01-01T00:00:00.000Z', '13')
 			assert.equal(newObj_01.friends[0].married, false, '14')
 			assert.equal(newObj_01.tags.length, 1, '15')
 			assert.equal(newObj_01.tags[0], 'string:NULL', '16')
+			assert.equal(newObj_01.note, 'string:NULL', '16_B')
 
 			const obj_02 = {
 				id: '123',
@@ -132,16 +134,17 @@ describe('format', () => {
 			assert.equal(newObj_02.friends[0]._isNull, false, '26')
 			assert.equal(newObj_02.friends[0].name, 'string:Brendan', '27')
 			assert.equal(newObj_02.friends[0].age, 30, '28')
-			assert.equal(newObj_02.friends[0].dob, 'string:1988-07-23T14:00:00.000Z', '29')
+			assert.equal(newObj_02.friends[0].dob, '1988-07-23T14:00:00.000Z', '29')
 			assert.equal(newObj_02.friends[0].married, true, '30')
 			assert.equal(newObj_02.friends[1]._isNull, false, '31')
 			assert.equal(newObj_02.friends[1].name, 'string:Boris', '32')
 			assert.equal(newObj_02.friends[1].age, -1, '33')
-			assert.equal(newObj_02.friends[1].dob, 'string:NULL', '34')
+			assert.equal(newObj_02.friends[1].dob, '1970-01-01T00:00:00.000Z', '34')
 			assert.equal(newObj_02.friends[1].married, false, '35')
 			assert.equal(newObj_02.tags.length, 2, '36')
 			assert.equal(newObj_02.tags[0], 'string:banana', '37')
 			assert.equal(newObj_02.tags[1], 'string:123', '38')
+			assert.equal(newObj_01.note, 'string:NULL', '38_B')
 
 			const obj_03 = {
 				id: '123',
@@ -154,7 +157,8 @@ describe('format', () => {
 					dob: new Date(1988,6,24),
 					married: 'true'
 				},
-				tags:['banana', 123]
+				tags:['banana', 123],
+				note: new Date(1988,6,24)
 			}
 			const newObj_03 = fitToSchema(obj_03, schema)
 			assert.equal(newObj_03.id, 123, '39')
@@ -169,11 +173,12 @@ describe('format', () => {
 			assert.equal(newObj_03.friends[0]._isNull, false, '48')
 			assert.equal(newObj_03.friends[0].name, 'string:Brendan', '49')
 			assert.equal(newObj_03.friends[0].age, 30, '50')
-			assert.equal(newObj_03.friends[0].dob, 'string:1988-07-23T14:00:00.000Z', '51')
+			assert.equal(newObj_03.friends[0].dob, '1988-07-23T14:00:00.000Z', '51')
 			assert.equal(newObj_03.friends[0].married, true, '52')
 			assert.equal(newObj_03.tags.length, 2, '53')
 			assert.equal(newObj_03.tags[0], 'string:banana', '54')
 			assert.equal(newObj_03.tags[1], 'string:123', '55')
+			assert.equal(newObj_03.note, 'string:1988-07-23T14:00:00.000Z', '55_B')
 		})
 	})
 })
