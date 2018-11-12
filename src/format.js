@@ -33,6 +33,8 @@ const cleanData = (obj) => {
 	}, {})
 }
 
+const _stringify = v => `string:${v}`
+
 const _allowedSchemaTypes = { 'string': true, 'number': true, 'boolean': true, 'object': true }
 const fitToSchema = (obj={}, schema={}, options={}) => {
 	const keys = Object.keys(schema)
@@ -67,10 +69,10 @@ const fitToSchema = (obj={}, schema={}, options={}) => {
 		const fieldIsObject = fieldType == 'object'
 
 		if ((v || v === 0 || v === '' || v === false) && fieldType == sType && !fieldIsArray && !fieldIsDate && !fieldIsObject)
-			acc[key] = v === '' ? 'NULL' : v
+			acc[key] = v === '' ? _stringify('NULL') : sType == 'string' ? _stringify(v) : v
 		else if (!v) {
 			if (sType == 'string') {
-				acc[key] = 'NULL'
+				acc[key] = _stringify('NULL')
 			} else if (sType == 'number') {
 				acc[key] = -1
 			} else if (sType == 'boolean') {
@@ -78,7 +80,7 @@ const fitToSchema = (obj={}, schema={}, options={}) => {
 			} else if (schemaTypeIsArray) {
 				const schemaArrayType = schemaType[0]
 				if (sType == 'array-string')
-					acc[key] = ['NULL']
+					acc[key] = [_stringify('NULL')]
 				else if (sType == 'array-number')
 					acc[key] = [-1]
 				else if (sType == 'array-boolean')
@@ -95,8 +97,8 @@ const fitToSchema = (obj={}, schema={}, options={}) => {
 		else {
 			if (sType == 'string') {
 				const newVal = 
-					fieldIsDate ? v.toISOString() : 
-						fieldIsObject ? 'Object' : `${v}`
+					fieldIsDate ? _stringify(v.toISOString()) : 
+						fieldIsObject ? 'Object' : _stringify(v)
 				acc[key] = newVal
 			} else if (sType == 'number') {
 				const newVal = 
@@ -115,24 +117,24 @@ const fitToSchema = (obj={}, schema={}, options={}) => {
 			} else if (schemaTypeIsArray) {
 				const schemaArrayType = schemaType[0]
 				const newVal = 
-					fieldType == 'string' && sType == 'array-string' ? [v] : 
+					fieldType == 'string' && sType == 'array-string' ? [_stringify(v)] : 
 						fieldType == 'string' && sType == 'array-number' ? (/^[0-9]+$/.test(v) ? [v*1] : [-1]) :  
 							fieldType == 'string' && sType == 'array-boolean' ? [true] : 
 								fieldType == 'string' && sType == 'array-object' ? [fitToSchema({}, schemaArrayType, { isNull: true })] : 
-									fieldType == 'number' && sType == 'array-string' ? [`${v}`] : 
+									fieldType == 'number' && sType == 'array-string' ? [_stringify(v)] : 
 										fieldType == 'number' && sType == 'array-number' ? [v] :  
 											fieldType == 'number' && sType == 'array-boolean' ? (v ? [true] : [false]) : 
 												fieldType == 'number' && sType == 'array-object' ? [fitToSchema({}, schemaArrayType, { isNull: true })] : 
-													fieldType == 'boolean' && sType == 'array-string' ? (v ? ['true'] : ['false']) : 
+													fieldType == 'boolean' && sType == 'array-string' ? (v ? [_stringify('true')] : [_stringify('false')]) : 
 														fieldType == 'boolean' && sType == 'array-number' ? (v ? [1] : [0]) :  
 															fieldType == 'boolean' && sType == 'array-boolean' ? (v ? [true] : [false]) : 
 																fieldType == 'boolean' && sType == 'array-object' ? [fitToSchema({}, schemaArrayType, { isNull: true })] : 
-																	fieldIsDate && sType == 'array-string' ? [v.toISOString()] : 
+																	fieldIsDate && sType == 'array-string' ? [_stringify(v.toISOString())] : 
 																		fieldIsDate && sType == 'array-number' ? [v.getTime()] :  
 																			fieldIsDate && sType == 'array-boolean' ? [true] : 
 																				fieldIsDate && sType == 'array-object' ? [fitToSchema({}, schemaArrayType, { isNull: true })] : 
 																					fieldIsArray ? _getNewArrayVal(v,sType,schemaArrayType,key) : 
-																						fieldType == 'object' && sType == 'array-string' ? ['NULL'] : 
+																						fieldType == 'object' && sType == 'array-string' ? [_stringify('NULL')] : 
 																							fieldType == 'object' && sType == 'array-number' ? [-1] :  
 																								fieldType == 'object' && sType == 'array-boolean' ? [false] : 
 																									fieldType == 'object' && sType == 'array-object' ? [fitToSchema(v, schemaArrayType, { isNull: false })] : null 
@@ -155,34 +157,34 @@ const fitToSchema = (obj={}, schema={}, options={}) => {
 }
 
 const _getNewArrayVal = (arrayVal=[], sType, schemaType, key) => {
-	const a = arrayVal.some(x => x) ? arrayVal : ['NULL']
+	const a = arrayVal.some(x => x) ? arrayVal : [_stringify('NULL')]
 	return a.map(x => {
 		const v = 
-			!x && typeof(x) == 'string' ? 'NULL' : 
+			!x && typeof(x) == 'string' ? _stringify('NULL') : 
 				!x && typeof(x) == 'number' ? 0 : 
-					!x ? 'NULL' : x
+					!x ? _stringify('NULL') : x
 
 		const fieldType = typeof(v)
 		const fieldIsDate = v instanceof Date
 
 		const newVal = 
-			fieldType == 'string' && sType == 'array-string' ? v : 
+			fieldType == 'string' && sType == 'array-string' ? _stringify(v) : 
 				fieldType == 'string' && sType == 'array-number' ? (/^[0-9]+$/.test(v) ? (v*1) : -1) :  
 					fieldType == 'string' && sType == 'array-boolean' ? true : 
 						fieldType == 'string' && sType == 'array-object' ? fitToSchema({}, schemaType, { isNull: true }) : 
-							fieldType == 'number' && sType == 'array-string' ? `${v}` : 
+							fieldType == 'number' && sType == 'array-string' ? _stringify(v) : 
 								fieldType == 'number' && sType == 'array-number' ? v :  
 									fieldType == 'number' && sType == 'array-boolean' ? (v ? true : false) : 
 										fieldType == 'number' && sType == 'array-object' ? fitToSchema({}, schemaType, { isNull: true }) : 
-											fieldType == 'boolean' && sType == 'array-string' ? (v ? 'true' : 'false') : 
+											fieldType == 'boolean' && sType == 'array-string' ? (v ? _stringify('true') : _stringify('false')) : 
 												fieldType == 'boolean' && sType == 'array-number' ? (v ? 1 : 0) :  
 													fieldType == 'boolean' && sType == 'array-boolean' ? (v ? true : false) : 
 														fieldType == 'boolean' && sType == 'array-object' ? fitToSchema({}, schemaType, { isNull: true }) : 
-															fieldIsDate && sType == 'array-string' ? v.toISOString() : 
+															fieldIsDate && sType == 'array-string' ? _stringify(v.toISOString()) : 
 																fieldIsDate && sType == 'array-number' ? v.getTime() :  
 																	fieldIsDate && sType == 'array-boolean' ? true : 
 																		fieldIsDate && sType == 'array-object' ? fitToSchema({}, schemaType, { isNull: true }) : 
-																			fieldType == 'object' && sType == 'array-string' ? 'NULL' : 
+																			fieldType == 'object' && sType == 'array-string' ? _stringify('NULL') : 
 																				fieldType == 'object' && sType == 'array-number' ? -1 :  
 																					fieldType == 'object' && sType == 'array-boolean' ? false : 
 																						fieldType == 'object' && sType == 'array-object' ? fitToSchema(v, schemaType, { isNull: false }) : null 
