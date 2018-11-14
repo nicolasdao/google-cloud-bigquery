@@ -7,91 +7,21 @@
 */
 
 const googleAuth = require('google-auto-auth')
-const { fetch } = require('./utils')
+const bigQuery = require('./src')
 
-// BigQuery Jobs APIs doc: https://cloud.google.com/bigquery/docs/reference/rest/v2/jobs/insert
-
-const getToken = auth => new Promise((onSuccess, onFailure) => auth.getToken((err, token) => err ? onFailure(err) : onSuccess(token)))
-
-const BIGQUERY_JOBS_URL = projectId => `https://www.googleapis.com/bigquery/v2/projects/${projectId}/jobs`
-//const BIGQUERY_QUERY_URL = (projectId, locationId, queryId) => `https://www.googleapis.com/bigquery/v2/projects/${projectId}/queries/${queryId}?location=${locationId}`
-const BIGQUERY_JOB_URL = (projectId, locationId, jobId) => `https://www.googleapis.com/bigquery/v2/projects/${projectId}/jobs/${jobId}?location=${locationId}`
-
+const _getToken = auth => new Promise((onSuccess, onFailure) => auth.getToken((err, token) => err ? onFailure(err) : onSuccess(token)))
 const _validateRequiredParams = (params={}) => Object.keys(params).forEach(p => {
 	if (!params[p])
 		throw new Error(`Parameter '${p}' is required.`)
 })
 
-// doc: https://cloud.google.com/bigquery/docs/reference/rest/v2/jobs#configuration.load
-const loadData = (projectId, db, table, sources=[], token) => Promise.resolve(null).then(() => {
-	_validateRequiredParams({ projectId, db, table, sources, sourcesLength: sources.length ,token })
-	const content = JSON.stringify({
-		configuration:{
-			load: {
-				autodetect: true,
-				destinationTable: {
-					projectId,
-					datasetId: db,
-					tableId: table
-				},
-				schemaUpdateOptions: ['ALLOW_FIELD_ADDITION', 'ALLOW_FIELD_RELAXATION'],
-				ignoreUnknownValues: true,
-				maxBadRecords: 10000,
-				allowJaggedRows: true,
-				writeDisposition: 'WRITE_APPEND', 				
-				sourceFormat: 'NEWLINE_DELIMITED_JSON',
-				sourceUris: sources.map(s => `gs://${s}`)
-			}
-		}
-	})
-	return fetch.post(BIGQUERY_JOBS_URL(projectId), {
-		'Content-Type': 'application/json',
-		Authorization: `Bearer ${token}`
-	}, content)
-}).then(res => _dealWithError(res, projectId))
-
-const createTable = (projectId, db, table, sources=[], token) => Promise.resolve(null).then(() => {
-	_validateRequiredParams({ projectId, db, table, sources, sourcesLength: sources.length ,token })
-	const content = JSON.stringify({
-		configuration:{
-			load: {
-				autodetect: true,
-				destinationTable: {
-					projectId,
-					datasetId: db,
-					tableId: table
-				},
-				schemaUpdateOptions: ['ALLOW_FIELD_ADDITION'],
-				writeDisposition: 'WRITE_APPEND', // 
-				ignoreUnknownValues: false,
-				maxBadRecords: 10000,
-				sourceFormat: 'NEWLINE_DELIMITED_JSON',
-				sourceUris: sources.map(s => `gs://${s}`)
-			}
-		}
-	}, null, ' ')
-	return fetch.post(BIGQUERY_JOBS_URL(projectId), {
-		'Content-Type': 'application/json',
-		Authorization: `Bearer ${token}`
-	}, content)
-}).then(res => _dealWithError(res, projectId))
-
-const _dealWithError = (res, projectId) => {
-	if (res && res.data.status && res.data.status.errorResult && res.data.status.errorResult.message && res.data.status.errorResult.message.toLowerCase().indexOf('access denied: file') >= 0) {
-		const storages = res.data.status.errorResult.message.toLowerCase().replace('access denied: file ', '').replace(': access denied', '')
-		throw new Error(`Access denied. You don't have enough permissions to access the storage location ${storages}. Please make sure the Agent using the BigQuery api in project ${projectId} has the following roles: storage.objectAdmin, bigquery.admin`)
-	}
-	return res
-}
-
-const getJob = (projectId, locationId, jobId, token) => fetch.get(
-	BIGQUERY_JOB_URL(projectId, locationId, jobId), {
-		'Content-Type': 'application/json',
-		Authorization: `Bearer ${token}`
-	})
-
 const createClient = ({ jsonKeyFile }) => {
 	_validateRequiredParams({ jsonKeyFile })
+	const { project_id:projectId, location_id } = require(jsonKeyFile)
+	if (!projectId)
+		throw new Error(`The service account JSON key file ${jsonKeyFile} does not contain a 'project_id' field.`)
+	if (!location_id)
+		throw new Error(`The service account JSON key file ${jsonKeyFile} does not contain a 'location_id' field.`)
 
 	const auth = googleAuth({ 
 		keyFilename: jsonKeyFile,
@@ -99,16 +29,55 @@ const createClient = ({ jsonKeyFile }) => {
 	})
 
 	return {
-		table: {
-			loadData: {
-				fromStorage: ({ projectId, db, table, sources=[] }) => getToken(auth).then(token => loadData(projectId, db, table, sources, token))
-			},
-			create: {
-				fromStorage: ({ projectId, db, table, sources=[] }) => getToken(auth).then(token => createTable(projectId, db, table, sources, token))
+		db: {
+			'get': db => {
+				if (!db)
+					throw new Error('Missing required argument \'db\'')
+				return { 
+					table: (table) => ({
+						'get': () => _getToken(auth).then(token => bigQuery.table.get(projectId, db, table, token)),
+						'exists': () => _getToken(auth).then(token => bigQuery.table.get(projectId, db, table, token)).then(({ status, data }) =>{
+							if (status >= 200 && status < 300)
+								return true
+							else if (status == 404)
+								return false
+							else {
+								let e  = new Error('Unknown error')
+								e.code = status
+								e.data = data 
+								throw e
+							}
+						}),
+						insert: {
+							fromStorage: ({ sources=[] }) => _getToken(auth).then(token => bigQuery.table.loadData(projectId, db, table, sources, token)),
+							values: ({ data, templateSuffix, skipInvalidRows=false }) => _getToken(auth).then(token => bigQuery.table.insert(projectId, db, table, data, token, { templateSuffix, skipInvalidRows }))
+						},
+						create: {
+							new: ({ schema={} }) => _getToken(auth).then(token => bigQuery.table.create(projectId, db, table, schema, token)),
+							fromStorage: ({ sources=[] }) => _getToken(auth).then(token => bigQuery.table.createFromStorage(projectId, db, table, sources, token))
+						}
+					}),
+					query: {
+						execute: ({ sql, params, pageSize=1000, timeout=10000, useLegacySql=false }) => _getToken(auth)
+							.then(token => bigQuery.query.execute(projectId, location_id, sql, params, token, { pageSize, timeout, useLegacySql }))
+					},
+					exists: () => _getToken(auth).then(token => bigQuery.db.get(projectId, db, token)).then(({ status, data }) =>{
+						if (status >= 200 && status < 300)
+							return true
+						else if (status == 404)
+							return false
+						else {
+							let e  = new Error('Unknown error')
+							e.code = status
+							e.data = data 
+							throw e
+						}
+					})
+				}
 			}
 		},
 		job: {
-			'get': ({ projectId, location, jobId }) => getToken(auth).then(token => getJob(projectId, location, jobId, token))
+			'get': ({ jobId }) => _getToken(auth).then(token => bigQuery.job.get(projectId, location_id, jobId, token))
 		}
 	}
 }

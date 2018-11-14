@@ -33,59 +33,112 @@ Before using this package, you must first:
 5. Save that JSON key into a `service-account.json` file. Make sure it is located under a path that is accessible to your app (the root folder usually).
 
 ## Show Me The Code
+### Loading Data To A Table & Creating A Table
 
 ```js
 const { join } = require('path')
-const createClient = require('google-cloud-bigquery')
+const { client } = require('google-cloud-bigquery')
 
-const client = createClient({
-	jsonKeyFile: join(__dirname, './service-account.json')
-})
+const bigQuery = client.new({ jsonKeyFile: join(__dirname, './serviceaccount.json') })
 
-// Load data into an existing BigQuery table. If the JSON objects in the sources contain new properties, those properties 
-// will automatically update the BigQuery table's schema
-client.table.loadData.fromStorage({
-	projectId: 'your-project-id', 
-	db: 'your-bigquery-datasetid', 
-	table: 'your-existing-table', 
-	sources: ['your-bucket/some-path/*', 'another-bucket/a-path/specific-file.json']
-})
-.then(res => {
-	console.log('YES')
-	console.log(JSON.stringify(res, null, ' '))
-	return client.job.get(res.data.jobReference).then(res => {
-		console.log('INFO ABOUT THE JOB:')
-		console.log(JSON.stringify(res, null, ' '))
+const YOUR_DB = 'your-dataset-id'
+// Assumes that YOUR_DB already exists
+const db = bigQuery.db.get(YOUR_DB)
+
+// Example 1 - Creating a table if it does not exists yet
+const YOUR_TABLE = 'user'
+db.table(YOUR_TABLE).exists()
+	.then(yes => {
+		if (yes) 
+			console.log(`Table '${YOUR_TABLE}' already exists in DB '${YOUR_DB}'`)
+		else
+			return db.table(YOUR_TABLE).create.new({ 
+				schema: {
+					id: 'integer',
+					username: 'string',
+					friends: [{
+						id: 'integer',
+						username: 'string',
+						score: 'float'
+					}],
+					country: {
+						code: 'string',
+						name: 'string'
+					},
+					married: 'boolean',
+					tags:['string'],
+					inserted_date: 'timestamp'
+				} 
+			})
 	})
-})
-.catch(err => {
-	console.log('NO')
-	console.log(`${err.message}\n${err.stack}`)
-})
+	.then(() => db.table(YOUR_TABLE).insert.values({ data:[{
+			id: 1,
+			username: 'Nicolas',
+			inserted_date: new Date()
+		}, {
+			id: 2,
+			username: 'Brendan',
+			country: {
+				code: 'AU',
+				name: 'Australia'
+			},
+			friends:[{
+				id: 1,
+				username: 'Nicolas',
+				score: 0.87
+			}, {
+				id: 3,
+				username: 'Boris',
+				score: 0.9
+			}],
+			inserted_date: new Date()
+		}, {
+			id: '3',
+			username: 'Boris',
+			tags:['admin',1],
+			inserted_date: Date.now()/1000
+		}]
+	}))
+	.then(() => db.query.execute({ 
+		sql:`select * from ${YOUR_DB}.${YOUR_TABLE} where id = @id`, 
+		params: { id: 2 } 
+	}))
+	.then(({ data }) => console.log(JSON.stringify(data, null, ' ')))
 
-// Create a new BigQuery table using the data located in the sources.
-client.table.create.fromStorage({
-	projectId: 'your-project-id', 
-	db: 'your-bigquery-datasetid', 
-	table: 'your-new-existing-table', 
-	sources: ['your-bucket/some-path/*', 'another-bucket/a-path/specific-file.json']
-})
-.then(res => {
-	console.log('YES')
-	console.log(JSON.stringify(res, null, ' '))
-	return client.job.get(res.data.jobReference).then(res => {
-		console.log('INFO ABOUT THE JOB:')
-		console.log(JSON.stringify(res, null, ' '))
-	})
-})
-.catch(err => {
-	console.log('NO')
-	console.log(`${err.message}\n${err.stack}`)
-})
+// Query Output
+// ============
+//
+// [
+//  {
+//   "id": 2,
+//   "username": "Brendan",
+//   "friends": [
+//    {
+//     "id": 1,
+//     "username": "Nicolas",
+//     "score": 0.87
+//    },
+//    {
+//     "id": 3,
+//     "username": "Boris",
+//     "score": 0.9
+//    }
+//   ],
+//   "country": {
+//    "code": "AU",
+//    "name": "Australia"
+//   },
+//   "married": null,
+//   "tags": [],
+//   "inserted_date": "2018-11-14T03:17:16.830Z"
+//  }
+// ]
+
 ```
 
-> Notice the usage of the `client.job.get` to check the status of the job. The signature of that api is as follow:
->	`client.job.get({ projectId: 'your-project-id', location: 'asia-northeast1', jobId: 'a-job-id' })`
+> Notice the usage of the `bigQuery.job.get` to check the status of the job. The signature of that api is as follow:
+>	`bigQuery.job.get({ projectId: 'your-project-id', location: 'asia-northeast1', jobId: 'a-job-id' })`
+
 
 # This Is What We re Up To
 We are Neap, an Australian Technology consultancy powering the startup ecosystem in Sydney. We simply love building Tech and also meeting new people, so don't hesitate to connect with us at [https://neap.co](https://neap.co).
