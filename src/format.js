@@ -40,17 +40,19 @@ const cleanData = (obj) => {
 
 const _stringify = (v,options={}) => options.mode == 'exact' ? `string:${v}` : `${v}`
 
-const _convertValToTimestamp = (fieldType, fieldIsDate, fieldValue) => {
+const _convertValToTimestamp = (fieldType, fieldIsDate, fieldValue, options={}) => {
+	const { mode } = options
+	const exactMode = mode == 'exact'
 	if (fieldType == 'string' || fieldType == 'number') {
 		const d = new Date(fieldValue)
 		if (d.toString().toLowerCase() == 'invalid date')
-			return NULL_TIMESTAMP
+			return exactMode ? NULL_TIMESTAMP : null
 		else
 			return d.toISOString()
 	} else if (fieldIsDate) 
 		return fieldValue.toISOString()
 	else
-		return NULL_TIMESTAMP
+		return exactMode ? NULL_TIMESTAMP : null
 }
 
 const _convertFieldToFloat = (fieldType, fieldIsArray, fieldIsDate, fieldIsObject, fieldValue, options={}) => {
@@ -93,8 +95,10 @@ const fitToSchema = (obj={}, schema={}, options={}) => {
 	if (keys.length == 0)
 		return {}
 	
-	return keys.reduce((acc,key) => {
+	const newObj = keys.reduce((acc,key) => {
 		const v = obj[key]
+		if (!exactMode && v === undefined)
+			return acc
 		const schemaType = schema[key]
 		let sType
 		const schemaTypeIsArray = Array.isArray(schemaType)
@@ -204,7 +208,7 @@ const fitToSchema = (obj={}, schema={}, options={}) => {
 
 				acc[key] = newVal
 			} else if (sType == 'timestamp') {
-				acc[key] = _convertValToTimestamp(fieldType, fieldIsDate, v)
+				acc[key] = _convertValToTimestamp(fieldType, fieldIsDate, v, options)
 			} else if (schemaTypeIsArray) {
 				const schemaArrayType = schemaType[0]
 				const newVal = 
@@ -213,32 +217,32 @@ const fitToSchema = (obj={}, schema={}, options={}) => {
 							fieldType == 'string' && sType == 'array-float' ? [_convertFieldToFloat(fieldType, fieldIsArray, fieldIsDate, fieldIsObject, v, options)] :  
 								fieldType == 'string' && sType == 'array-boolean' ? [true] : 
 									fieldType == 'string' && sType == 'array-object' ? [fitToSchema({}, schemaArrayType, { mode, isNull: true })] : 
-										fieldType == 'string' && sType == 'array-timestamp' ? [_convertValToTimestamp(fieldType, fieldIsDate, v)] : 
+										fieldType == 'string' && sType == 'array-timestamp' ? [_convertValToTimestamp(fieldType, fieldIsDate, v, options)] : 
 											fieldType == 'number' && sType == 'array-string' ? [_stringify(v,options)] : 
 												fieldType == 'number' && sType == 'array-integer' ? [Math.round(v)] :  
 													fieldType == 'number' && sType == 'array-float' ? [_convertFieldToFloat(fieldType, fieldIsArray, fieldIsDate, fieldIsObject, v, options)] :  
 														fieldType == 'number' && sType == 'array-boolean' ? (v ? [true] : [false]) : 
 															fieldType == 'number' && sType == 'array-object' ? [fitToSchema({}, schemaArrayType, { mode, isNull: true })] : 
-																fieldType == 'number' && sType == 'array-timestamp' ? [_convertValToTimestamp(fieldType, fieldIsDate, v)] : 
+																fieldType == 'number' && sType == 'array-timestamp' ? [_convertValToTimestamp(fieldType, fieldIsDate, v, options)] : 
 																	fieldType == 'boolean' && sType == 'array-string' ? (v ? [_stringify('true',options)] : [_stringify('false',options)]) : 
 																		fieldType == 'boolean' && sType == 'array-integer' ? (v ? [1] : [0]) :  
 																			fieldType == 'boolean' && sType == 'array-float' ? [_convertFieldToFloat(fieldType, fieldIsArray, fieldIsDate, fieldIsObject, v, options)] :  
 																				fieldType == 'boolean' && sType == 'array-boolean' ? (v ? [true] : [false]) : 
 																					fieldType == 'boolean' && sType == 'array-object' ? [fitToSchema({}, schemaArrayType, { mode, isNull: true })] : 
-																						fieldType == 'boolean' && sType == 'array-timestamp' ? [_convertValToTimestamp(fieldType, fieldIsDate, v)] : 
+																						fieldType == 'boolean' && sType == 'array-timestamp' ? [_convertValToTimestamp(fieldType, fieldIsDate, v, options)] : 
 																							fieldIsDate && sType == 'array-string' ? [_stringify(v.toISOString(),options)] : 
 																								fieldIsDate && sType == 'array-integer' ? [v.getTime()] :  
 																									fieldIsDate && sType == 'array-float' ? [_convertFieldToFloat(fieldType, fieldIsArray, fieldIsDate, fieldIsObject, v, options)] :  
 																										fieldIsDate && sType == 'array-boolean' ? [true] : 
 																											fieldIsDate && sType == 'array-object' ? [fitToSchema({}, schemaArrayType, { mode, isNull: true })] : 
-																												fieldIsDate && sType == 'array-timestamp' ? [_convertValToTimestamp(fieldType, fieldIsDate, v)] : 
+																												fieldIsDate && sType == 'array-timestamp' ? [_convertValToTimestamp(fieldType, fieldIsDate, v, options)] : 
 																													fieldIsArray ? _getNewArrayVal(v,sType,schemaArrayType,key,options) : 
 																														fieldType == 'object' && sType == 'array-string' ? [_stringify(nullString,options)] : 
 																															fieldType == 'object' && sType == 'array-integer' ? [NULL_INT] :  
 																																fieldType == 'object' && sType == 'array-float' ? [_convertFieldToFloat(fieldType, fieldIsArray, fieldIsDate, fieldIsObject, v, options)] :  
 																																	fieldType == 'object' && sType == 'array-boolean' ? [false] : 
 																																		fieldType == 'object' && sType == 'array-object' ? [fitToSchema(v, schemaArrayType, { mode, isNull: false })] : 
-																																			fieldType == 'object' && sType == 'array-timestamp' ? [_convertValToTimestamp(fieldType, fieldIsDate, v)] : null 
+																																			fieldType == 'object' && sType == 'array-timestamp' ? [_convertValToTimestamp(fieldType, fieldIsDate, v, options)] : null 
 
 				if (!newVal)
 					throw new Error(`Field '${key}' uses an unsupported type ${sType} (ref. #06).`)
@@ -254,7 +258,12 @@ const fitToSchema = (obj={}, schema={}, options={}) => {
 		}
 
 		return acc
-	}, options.isNull === undefined ? {} : { _isNull: options.isNull ? true : false })
+	}, options.isNull === undefined || !exactMode ? {} : { _isNull: options.isNull ? true : false })
+	
+	if (Object.keys(newObj).some(x => x))
+		return newObj
+	else
+		return null
 }
 
 const _getNewArrayVal = (arrayVal=[], sType, schemaType, key, options={}) => {
@@ -276,31 +285,31 @@ const _getNewArrayVal = (arrayVal=[], sType, schemaType, key, options={}) => {
 					fieldType == 'string' && sType == 'array-float' ? _convertFieldToFloat(fieldType, false, fieldIsDate, false, v, options) :  
 						fieldType == 'string' && sType == 'array-boolean' ? true : 
 							fieldType == 'string' && sType == 'array-object' ? fitToSchema({}, schemaType, { mode, isNull: true }) : 
-								fieldType == 'string' && sType == 'array-timestamp' ? _convertValToTimestamp(fieldType, fieldIsDate, v) : 
+								fieldType == 'string' && sType == 'array-timestamp' ? _convertValToTimestamp(fieldType, fieldIsDate, v, options) : 
 									fieldType == 'number' && sType == 'array-string' ? _stringify(v,options) : 
 										fieldType == 'number' && sType == 'array-integer' ? Math.round(v) :  
 											fieldType == 'number' && sType == 'array-float' ? _convertFieldToFloat(fieldType, false, fieldIsDate, false, v, options) :  
 												fieldType == 'number' && sType == 'array-boolean' ? (v ? true : false) : 
 													fieldType == 'number' && sType == 'array-object' ? fitToSchema({}, schemaType, { mode, isNull: true }) : 
-														fieldType == 'number' && sType == 'array-timestamp' ? _convertValToTimestamp(fieldType, fieldIsDate, v) : 
+														fieldType == 'number' && sType == 'array-timestamp' ? _convertValToTimestamp(fieldType, fieldIsDate, v, options) : 
 															fieldType == 'boolean' && sType == 'array-string' ? (v ? _stringify('true',options) : _stringify('false',options)) : 
 																fieldType == 'boolean' && sType == 'array-integer' ? (v ? 1 : 0) :  
 																	fieldType == 'boolean' && sType == 'array-float' ? _convertFieldToFloat(fieldType, false, fieldIsDate, false, v, options) :  
 																		fieldType == 'boolean' && sType == 'array-boolean' ? (v ? true : false) : 
 																			fieldType == 'boolean' && sType == 'array-object' ? fitToSchema({}, schemaType, { mode, isNull: true }) : 
-																				fieldType == 'boolean' && sType == 'array-timestamp' ? _convertValToTimestamp(fieldType, fieldIsDate, v) : 
+																				fieldType == 'boolean' && sType == 'array-timestamp' ? _convertValToTimestamp(fieldType, fieldIsDate, v, options) : 
 																					fieldIsDate && sType == 'array-string' ? _stringify(v.toISOString(),options) : 
 																						fieldIsDate && sType == 'array-integer' ? v.getTime() :  
 																							fieldIsDate && sType == 'array-float' ? _convertFieldToFloat(fieldType, false, fieldIsDate, false, v, options) :  
 																								fieldIsDate && sType == 'array-boolean' ? true : 
 																									fieldIsDate && sType == 'array-object' ? fitToSchema({}, schemaType, { mode, isNull: true }) : 
-																										fieldIsDate && sType == 'array-timestamp' ? _convertValToTimestamp(fieldType, fieldIsDate, v) : 
+																										fieldIsDate && sType == 'array-timestamp' ? _convertValToTimestamp(fieldType, fieldIsDate, v, options) : 
 																											fieldType == 'object' && sType == 'array-string' ? _stringify(nullString,options) : 
 																												fieldType == 'object' && sType == 'array-integer' ? NULL_INT :  
 																													fieldType == 'object' && sType == 'array-float' ? _convertFieldToFloat(fieldType, false, fieldIsDate, false, v, options) : 
 																														fieldType == 'object' && sType == 'array-boolean' ? false : 
 																															fieldType == 'object' && sType == 'array-object' ? fitToSchema(v, schemaType, { mode, isNull: false }) : 
-																																fieldType == 'object' && sType == 'array-timestamp' ? _convertValToTimestamp(fieldType, fieldIsDate, v) : null 
+																																fieldType == 'object' && sType == 'array-timestamp' ? _convertValToTimestamp(fieldType, fieldIsDate, v, options) : null 
 
 		if (mode == 'exact' && !newVal) 
 			throw new Error(`Field '${key}' uses an unsupported type ${sType} (ref. #08).`)

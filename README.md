@@ -33,7 +33,7 @@ Before using this package, you must first:
 5. Save that JSON key into a `service-account.json` file. Make sure it is located under a path that is accessible to your app (the root folder usually).
 
 ## Show Me The Code
-### Loading Data To A Table & Creating A Table
+### Basics
 
 ```js
 const { join } = require('path')
@@ -45,7 +45,7 @@ const YOUR_DB = 'your-dataset-id'
 // Assumes that YOUR_DB already exists
 const db = bigQuery.db.get(YOUR_DB)
 
-// Example 1 - Creating a table if it does not exists yet
+// Example 1 - Creating a new table, adding data, reading data
 const YOUR_TABLE = 'user'
 db.table(YOUR_TABLE).exists()
 	.then(yes => {
@@ -135,6 +135,38 @@ db.table(YOUR_TABLE).exists()
 // ]
 
 ```
+
+### Extra Precautions While Inserting Data
+
+BigQuery casting capabilities are quite limited. When a type does not fit into the table, that row will either crashes the entire insert, or will be completely be ignored (we're using that last setting). To make sure that as much data is being inserted as possible, we've added an option called `forcedSchema` in the `db.table('some-table').insert.values` api:
+
+```js
+db.table(YOUR_TABLE).insert.values({
+	data:{
+		id: '123.34',
+		username: { hello: 'world' },
+		inserted_date: new Date(2018,10,14)
+	},
+	forcedSchema:{
+		id: 'integer',
+		username: 'string',
+		inserted_date: 'timestamp'
+	}
+})
+```
+
+Under the hood, this code will transform the data payload to the following:
+
+```js
+{
+	id: 123,
+	username: 'Object',
+	inserted_date: '2018-11-13T13:00:00.000Z'
+}
+```
+
+This object is guaranteed to comply to the schema so as much data is being inserted.
+
 
 > Notice the usage of the `bigQuery.job.get` to check the status of the job. The signature of that api is as follow:
 >	`bigQuery.job.get({ projectId: 'your-project-id', location: 'asia-northeast1', jobId: 'a-job-id' })`

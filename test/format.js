@@ -6,9 +6,6 @@
  * LICENSE file in the root directory of this source tree.
 */
 
-/* global describe */
-/* global it */
-
 const { assert } = require('chai')
 const { cleanData, fitToSchema, transpileSchema, bigQueryResultToJson } = require('../src/format')
 
@@ -131,12 +128,12 @@ describe('format', () => {
 			assert.equal(newObj_02.age, 37, '20')
 			assert.isNotOk(newObj_02.address, '21')
 			assert.equal(newObj_02.friends.length, 2, '25')
-			assert.isNotOk(newObj_02.friends[0]._isNull, '26')
+			assert.isOk(newObj_02.friends[0]._isNull === undefined, '26')
 			assert.equal(newObj_02.friends[0].name, 'Brendan', '27')
 			assert.equal(newObj_02.friends[0].age, 31, '28')
 			assert.equal(newObj_02.friends[0].dob, '1988-07-23T14:00:00.000Z', '29')
 			assert.equal(newObj_02.friends[0].married, true, '30')
-			assert.isNotOk(newObj_02.friends[1]._isNull, '31')
+			assert.isOk(newObj_02.friends[1]._isNull === undefined, '31')
 			assert.equal(newObj_02.friends[1].name, 'Boris', '32')
 			assert.isNotOk(newObj_02.friends[1].age, '33')
 			assert.isNotOk(newObj_02.friends[1].dob, '34')
@@ -156,7 +153,7 @@ describe('format', () => {
 				friends: {
 					name: 'Brendan',
 					age: 30,
-					dob: new Date(1988,6,24),
+					dob: new Date(1988,6,24).getTime(),
 					married: 'true'
 				},
 				tags:['banana', 123, ''],
@@ -171,7 +168,7 @@ describe('format', () => {
 			assert.equal(newObj_03.age, 0, '42')
 			assert.isNotOk(newObj_03.address, '43')
 			assert.equal(newObj_03.friends.length, 1, '47')
-			assert.isNotOk(newObj_03.friends[0]._isNull, '48')
+			assert.isOk(newObj_03.friends[0]._isNull === undefined, '48')
 			assert.equal(newObj_03.friends[0].name, 'Brendan', '49')
 			assert.equal(newObj_03.friends[0].age, 30, '50')
 			assert.equal(newObj_03.friends[0].dob, '1988-07-23T14:00:00.000Z', '51')
