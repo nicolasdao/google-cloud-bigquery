@@ -180,6 +180,12 @@ describe('format', () => {
 			assert.equal(newObj_03.note, '1988-07-23T14:00:00.000Z', '57')
 			assert.equal(newObj_03.size, 1.1, '58')
 			assert.isNotOk(newObj_03.score, '59')
+
+			const obj_04 = {
+				friends: []
+			}
+			const newObj_04 = fitToSchema(obj_04, schema)
+			assert.equal(newObj_04.friends.length, 0, '60')
 		})
 
 		it('Should transform an object so it exactly fits a specific schema (\'exact\' mode).', () => {
