@@ -39,7 +39,7 @@ Before using this package, you must first:
 const { join } = require('path')
 const { client } = require('google-cloud-bigquery')
 
-const bigQuery = client.new({ jsonKeyFile: join(__dirname, './serviceaccount.json') })
+const bigQuery = client.new({ jsonKeyFile: join(__dirname, './service-account.json') })
 
 const YOUR_DB = 'your-dataset-id'
 // Assumes that YOUR_DB already exists
