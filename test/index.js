@@ -20,7 +20,7 @@ describe('index', () => {
 				data: [{
 					id: '123.23',
 					firstname: 'Nicolas',
-					age: new Date(2018,10,14),
+					age: new Date(1542114000000),
 					country: ['hello'],
 					inserted_date: true
 				}, {
@@ -38,7 +38,7 @@ describe('index', () => {
 						name: 'Rocky',
 						score: 34.5
 					}],
-					inserted_date: new Date(2018,10,14)
+					inserted_date: new Date(1542114000000)
 				}],
 				forcedSchema: {
 					id: 'integer',

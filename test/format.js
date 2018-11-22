@@ -112,7 +112,7 @@ describe('format', () => {
 				friends: [{
 					name: 'Brendan',
 					age: 30.9,
-					dob: new Date(1988,6,24),
+					dob: new Date(585669600000),
 					married: 'true'
 				}, {
 					name: 'Boris'
@@ -153,11 +153,11 @@ describe('format', () => {
 				friends: {
 					name: 'Brendan',
 					age: 30,
-					dob: new Date(1988,6,24).getTime(),
+					dob: new Date(585669600000).getTime(),
 					married: 'true'
 				},
 				tags:['banana', 123, ''],
-				note: new Date(1988,6,24),
+				note: new Date(585669600000),
 				size: 1.1,
 				score: { hello: 'world' }
 			}
@@ -249,7 +249,7 @@ describe('format', () => {
 				friends: [{
 					name: 'Brendan',
 					age: 30,
-					dob: new Date(1988,6,24),
+					dob: new Date(585669600000),
 					married: 'true'
 				}, {
 					name: 'Boris'
@@ -293,11 +293,11 @@ describe('format', () => {
 				friends: {
 					name: 'Brendan',
 					age: 30,
-					dob: new Date(1988,6,24),
+					dob: new Date(585669600000),
 					married: 'true'
 				},
 				tags:['banana', 123, ''],
-				note: new Date(1988,6,24),
+				note: new Date(585669600000),
 				size: 1.1,
 				score: { hello: 'world' }
 			}
