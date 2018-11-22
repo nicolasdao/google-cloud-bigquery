@@ -382,8 +382,8 @@ const bigQueryResultToJson = (data={}) => {
 			else
 				return { name, convert: x => x }
 		})
-
-		return data.rows.map(({ f }) => schema.reduce((acc, { name, convert }, idx) => {
+		
+		return data.rows.filter(x => x).map(({ f }) => schema.reduce((acc, { name, convert }, idx) => {
 			const v = f[idx].v
 			if (Array.isArray(v))
 				acc[name] = v.map(x => convert(x.v))
