@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.2.3"></a>
+## [0.2.3](https://github.com/nicolasdao/google-cloud-bigquery/compare/v0.2.2...v0.2.3) (2018-11-22)
+
+
+### Bug Fixes
+
+* Unit test issue due to bad UTC date formatting ([7a3494a](https://github.com/nicolasdao/google-cloud-bigquery/commit/7a3494a))
+
+
+
 <a name="0.2.2"></a>
 ## [0.2.2](https://github.com/nicolasdao/google-cloud-bigquery/compare/v0.2.1...v0.2.2) (2018-11-14)
 
