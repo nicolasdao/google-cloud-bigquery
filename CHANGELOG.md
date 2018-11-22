@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.2.4"></a>
+## [0.2.4](https://github.com/nicolasdao/google-cloud-bigquery/compare/v0.2.3...v0.2.4) (2018-11-22)
+
+
+### Bug Fixes
+
+* undefine exception ([f299c31](https://github.com/nicolasdao/google-cloud-bigquery/commit/f299c31))
+
+
+
 <a name="0.2.3"></a>
 ## [0.2.3](https://github.com/nicolasdao/google-cloud-bigquery/compare/v0.2.2...v0.2.3) (2018-11-22)
 
