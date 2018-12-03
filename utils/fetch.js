@@ -12,12 +12,18 @@ const postData = (url, headers={}, body) => Promise.resolve(null).then(() => {
 		.then(res => res.json().then(data => ({ status: res.status, data })))
 })
 
+const patchData = (url, headers={}, body) => Promise.resolve(null).then(() => {
+	return fetch(url, { method: 'PATCH', headers, body })
+		.then(res => res.json().then(data => ({ status: res.status, data })))
+})
+
 const getData = (url, headers={}) => Promise.resolve(null).then(() => {
 	return fetch(url, { method: 'GET', headers })
 		.then(res => res.json().then(data => ({ status: res.status, data })))
 })
 
 module.exports = {
+	'get': getData,
 	post: postData,
-	'get': getData
+	patch: patchData
 }

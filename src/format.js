@@ -324,7 +324,16 @@ const _getNewArrayVal = (arrayVal=[], sType, schemaType, key, options={}) => {
 }
 
 const _primitiveTypes = { 'number': 'INTEGER', 'integer': 'INTEGER', 'float': 'FLOAT', 'timestamp': 'TIMESTAMP', 'boolean': 'BOOLEAN', 'string': 'STRING' }
-const transpileSchema = (schema={}) => {
+/**
+ * [description]
+ * @param  {Object}  schema [description]
+ * @return {[Field]} results.fields       
+ * @return {String}  results.fields.name      Field's name
+ * @return {String}  results.fields.type      One of the following values: 'INTEGER', 'FLOAT', 'TIMESTAMP', 'BOOLEAN', 'STRING', 'RECORD'
+ * @return {String}  results.fields.mode      One of the following values: 'NULLABLE', 'REPEATED', 'REQUIRED'
+ * @return {[Field]} results.fields.fields    If 'type' is 'RECORD', then these are the fields of the record 
+ */
+const schemaToFields = (schema={}) => {
 	const keys = Object.keys(schema)
 	if (!keys.some(x => x))
 		return { fields:[] }
@@ -340,7 +349,7 @@ const transpileSchema = (schema={}) => {
 
 			if (mode == 'NULLABLE') {
 				type = 'RECORD'
-				fields = transpileSchema(v).fields
+				fields = schemaToFields(v).fields
 			} else {
 				const arg = v[0]
 				type = _primitiveTypes[`${v}`.toLowerCase()]
@@ -348,7 +357,7 @@ const transpileSchema = (schema={}) => {
 					if (typeof(arg) != 'object')
 						throw new Error(`Invalid schema type. Field '${name}' is using the unsupported type '[${v}]'`)
 					type = 'RECORD'
-					fields = transpileSchema(arg).fields
+					fields = schemaToFields(arg).fields
 				}
 			}
 		}
@@ -358,6 +367,26 @@ const transpileSchema = (schema={}) => {
 		acc.fields.push(field)
 		return acc
 	}, { fields:[] })
+}
+
+const fieldsToSchema = fields => {
+	fields = fields || []
+	return fields.reduce((acc, { name, type, mode, fields }) => {
+		const t = type.toLowerCase().trim()
+		const m = mode.toLowerCase().trim()
+		if (t != 'record' && m != 'repeated')
+			acc[name] = t 
+		else if (t == 'record') {
+			const v = fieldsToSchema(fields)
+			if (m == 'repeated')
+				acc[name] = [v]
+			else
+				acc[name] = v	
+		} else if (m == 'repeated') 
+			acc[name] = [t]
+
+		return acc
+	}, {})
 }
 
 const bigQueryResultToJson = (data={}) => {
@@ -398,6 +427,7 @@ const bigQueryResultToJson = (data={}) => {
 module.exports = {
 	cleanData,
 	fitToSchema,
-	transpileSchema,
-	bigQueryResultToJson
+	schemaToFields,
+	bigQueryResultToJson,
+	fieldsToSchema
 }

@@ -7,7 +7,10 @@
 */
 
 const { assert } = require('chai')
-const { cleanData, fitToSchema, transpileSchema, bigQueryResultToJson } = require('../src/format')
+const { cleanData, fitToSchema, schemaToFields, bigQueryResultToJson, fieldsToSchema } = require('../src/format')
+const schemaSample = require('./mocks/schema')
+const fieldSchemaSample = require('./mocks/bigquerySchema')
+const { obj } = require('../utils')
 
 const NULL_FLOAT = 5e-16
 
@@ -326,7 +329,7 @@ describe('format', () => {
 		})
 	})
 
-	describe('#transpileSchema', () => {
+	describe('#schemaToFields', () => {
 		it('Should transform a schema to a Google BigQuery table schema', () => {
 			const schema = {
 				id: 'integer',
@@ -353,7 +356,7 @@ describe('format', () => {
 				size: 'float'
 			}
 
-			const { fields=[] } = transpileSchema(schema)
+			const { fields=[] } = schemaToFields(schema)
 			assert.equal(fields.length, 8, '01')
 
 			let type, mode, _fields, __fields, ___fields
@@ -663,6 +666,13 @@ describe('format', () => {
 			assert.equal(result[1].married, null, '11_B')
 			assert.equal(result[1].tags.length, 0, '12_B')
 			assert.equal(result[1].inserted_date.toISOString(), '2018-11-14T02:05:32.368Z', '13_B')
+		})
+	})
+
+	describe('#fieldsToSchema', () => {
+		it('Should convert a BigQuery fields schema into a schema', () => {
+			const schema = fieldsToSchema(fieldSchemaSample.fields)
+			assert.isOk(obj.same(schema, schemaSample), '01')
 		})
 	})
 })

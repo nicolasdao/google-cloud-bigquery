@@ -33,7 +33,7 @@ Before using this package, you must first:
 5. Save that JSON key into a `service-account.json` file. Make sure it is located under a path that is accessible to your app (the root folder usually).
 
 ## Show Me The Code
-### Basics
+### Creating A New Table
 
 ```js
 const { join } = require('path')
@@ -45,65 +45,71 @@ const YOUR_DB = 'your-dataset-id'
 // Assumes that YOUR_DB already exists
 const db = bigQuery.db.get(YOUR_DB)
 
-// Example 1 - Creating a new table, adding data, reading data
 const YOUR_TABLE = 'user'
 db.table(YOUR_TABLE).exists()
-	.then(yes => {
-		if (yes) 
-			console.log(`Table '${YOUR_TABLE}' already exists in DB '${YOUR_DB}'`)
-		else
-			return db.table(YOUR_TABLE).create.new({ 
-				schema: {
+	.then(yes => yes 
+		? console.log(`Table '${YOUR_TABLE}' already exists in DB '${YOUR_DB}'`)
+		: db.table(YOUR_TABLE).create.new({ 
+			schema: {
+				id: 'integer',
+				username: 'string',
+				friends: [{
 					id: 'integer',
 					username: 'string',
-					friends: [{
-						id: 'integer',
-						username: 'string',
-						score: 'float'
-					}],
-					country: {
-						code: 'string',
-						name: 'string'
-					},
-					married: 'boolean',
-					tags:['string'],
-					inserted_date: 'timestamp'
-				} 
-			})
-	})
-	.then(() => db.table(YOUR_TABLE).insert.values({ data:[{
+					score: 'float'
+				}],
+				country: {
+					code: 'string',
+					name: 'string'
+				},
+				married: 'boolean',
+				tags:['string'],
+				inserted_date: 'timestamp'
+			} 
+		}).then(() => console.log(`Table '${YOUR_TABLE}' successfully added to DB '${YOUR_DB}'`)))
+```
+
+### Inserting Data
+
+```js
+db.table(YOUR_TABLE).insert.values({ data:[{
+		id: 1,
+		username: 'Nicolas',
+		inserted_date: new Date()
+	}, {
+		id: 2,
+		username: 'Brendan',
+		country: {
+			code: 'AU',
+			name: 'Australia'
+		},
+		friends:[{
 			id: 1,
 			username: 'Nicolas',
-			inserted_date: new Date()
+			score: 0.87
 		}, {
-			id: 2,
-			username: 'Brendan',
-			country: {
-				code: 'AU',
-				name: 'Australia'
-			},
-			friends:[{
-				id: 1,
-				username: 'Nicolas',
-				score: 0.87
-			}, {
-				id: 3,
-				username: 'Boris',
-				score: 0.9
-			}],
-			inserted_date: new Date()
-		}, {
-			id: '3',
+			id: 3,
 			username: 'Boris',
-			tags:['admin',1],
-			inserted_date: Date.now()/1000
-		}]
-	}))
-	.then(() => db.query.execute({ 
-		sql:`select * from ${YOUR_DB}.${YOUR_TABLE} where id = @id`, 
-		params: { id: 2 } 
-	}))
-	.then(({ data }) => console.log(JSON.stringify(data, null, ' ')))
+			score: 0.9
+		}],
+		inserted_date: new Date()
+	}, {
+		id: '3',
+		username: 'Boris',
+		tags:['admin',1],
+		inserted_date: Date.now()/1000
+	}]
+})
+```
+
+### Getting Data
+
+```js
+db.query.execute({ 
+	sql:`select * from ${YOUR_DB}.${YOUR_TABLE} where id = @id`, 
+	params: { id: 2 } 
+})
+.then(({ data }) => console.log(JSON.stringify(data, null, ' ')))
 
 // Query Output
 // ============
@@ -136,7 +142,45 @@ db.table(YOUR_TABLE).exists()
 
 ```
 
-### Extra Precautions While Inserting Data
+### Updating The Table's Schema
+
+With BigQuery, only 2 types of updates are possible:
+1. Adding new fields
+2. Relaxing the constraint on a field from `REQUIRED` to `NULLABLE`
+
+The second type of update is not usefull here as this project always creates nullable fields. The following example shows how to perform a schema update if the local schema is different from the current BigQuery schema:
+
+```js
+
+// Let's add a new 'deleted_date' field to our local schema
+const newSchema = {
+	id: 'integer',
+	username: 'string',
+	friends: [{
+		id: 'integer',
+		username: 'string',
+		score: 'float'
+	}],
+	country: {
+		code: 'string',
+		name: 'string'
+	},
+	married: 'boolean',
+	tags:['string'],
+	inserted_date: 'timestamp',
+	deleted_date: 'timestamp'
+}
+
+db.table(YOUR_TABLE).schema.isDiff(newSchema)
+	.then(yes => yes
+		? Promise.resolve(console.log(`Schema changes detected. Updating now...`))
+			.then(() => db.table(YOUR_TABLE).schema.update(newSchema))
+			.then(() => console.log(`Schema successfully updated.`))
+		: console.log(`No schema updates found`)
+	)
+```
+
+## Extra Precautions While Inserting Data
 
 BigQuery casting capabilities are quite limited. When a type does not fit into the table, that row will either crashes the entire insert, or will be completely be ignored (we're using that last setting). To make sure that as much data is being inserted as possible, we've added an option called `forcedSchema` in the `db.table('some-table').insert.values` api:
 

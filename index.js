@@ -8,7 +8,8 @@
 
 const googleAuth = require('google-auto-auth')
 const bigQuery = require('./src')
-const { fitToSchema } = require('./src/format')
+const { fitToSchema, fieldsToSchema } = require('./src/format')
+const { obj } = require('./utils')
 
 const _getToken = auth => new Promise((onSuccess, onFailure) => auth.getToken((err, token) => err ? onFailure(err) : onSuccess(token)))
 const _validateRequiredParams = (params={}) => Object.keys(params).forEach(p => {
@@ -78,6 +79,21 @@ const createClient = ({ jsonKeyFile, getToken, projectDetails }) => {
 						create: {
 							new: ({ schema={} }) => __getToken().then(token => bigQuery.table.create(projectId, db, table, schema, token)),
 							fromStorage: ({ sources=[] }) => __getToken().then(token => bigQuery.table.createFromStorage(projectId, db, table, sources, token))
+						},
+						schema: {
+							isDiff: (schema) => __getToken().then(token => bigQuery.table.get(projectId, db, table, token)).then(({ data }) => {
+								if (!schema)
+									throw new Error('Missing required \'schema\' argument.')
+								if (Object.keys(schema).length == 0)
+									throw new Error('Wrong argument \'schema\'. This object must at least contain one property.')
+
+								if (!data.schema || !(data.schema.fields || []).some(x => x))
+									return true
+
+								const currentSchema = fieldsToSchema(data.schema.fields)
+								return !obj.same(schema, currentSchema)
+							}),
+							update: (schema) => __getToken().then(token => bigQuery.table.update(projectId, db, table, schema, token))
 						}
 					}),
 					query: {

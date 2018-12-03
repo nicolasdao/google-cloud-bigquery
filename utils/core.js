@@ -104,7 +104,7 @@ const isEmptyObj = obj => {
 }
 
 const isObj = obj => {
-	if (!obj || typeof(obj) != 'object')
+	if (!obj || typeof(obj) != 'object' || Array.isArray(obj) || (obj instanceof Date))
 		return false 
 
 	try {
@@ -146,17 +146,81 @@ const getDiff = (orig={}, current={}) => {
 	}, {})
 }
 
-const objAreSame = (obj1, obj2) => {
-	const o = getDiff(obj1, obj2)
-	return Object.keys(o || {}).length == 0
-}
+/**
+ * [description]
+ * @param  {Object} o_1     			That can be anything, incl. primitive type
+ * @param  {Object} o_2     			That can be anything, incl. primitive type
+ * @param  {Object} options.throwError 	Default false. If set to true, a failed test throws an exception with the details.
+ * @return {Boolean}         			Whether or not the test passes
+ */
+const objAreSame = (o_1, o_2, options={}) => {
+	const failed = msg => {
+		if (options.throwError)
+			throw new Error(msg)
+		else
+			return false
+	}
+	if (o_1 === o_2)
+		return true
+	
+	if (o_1 === null || o_1 === undefined)
+		return failed(`The first object is non-truthy while the second is truthy`)
 
-const arrayObjAreDiff = (objArr_01, objArr_02) => {
-	objArr_01 = objArr_01 || []
-	objArr_02 = objArr_02 || []
-	if (objArr_01.length != objArr_02.length)
-		return false 
-	return objArr_01.some(h1 => !objArr_02.some(h2 => objAreSame(h1, h2)))
+	if (o_2 === null || o_2 === undefined)
+		return failed(`The second object is non-truthy while the first is truthy`)
+	
+	const o_1_type = o_1 instanceof Date ? 'date' : Array.isArray(o_1) ? 'array' : typeof(o_1)
+	const o_2_type = o_2 instanceof Date ? 'date' : Array.isArray(o_2) ? 'array' : typeof(o_2)
+
+	if (o_1_type != o_2_type)
+		return failed(`Object types do not match (${o_1_type} != ${o_2_type})`)
+
+	if (o_1_type == 'date')
+		return o_1.toString() == o_2.toString() ? true : failed(`Dates don't match (${o_1} != ${o_2})`)
+
+	if (o_1_type == 'object') {
+		const o_1_keys = Object.keys(o_1)
+		const o_2_keys = Object.keys(o_2)
+		if (o_1_keys.length > o_2_keys.length) {
+			const additionalKey = o_1_keys.find(key => !o_2_keys.some(k => k == key))
+			return failed(`Property '${additionalKey}' in the first object does not exit in the second`)
+		}
+
+		if (o_1_keys.length < o_2_keys.length) {
+			const additionalKey = o_2_keys.find(key => !o_1_keys.some(k => k == key))
+			return failed(`Property '${additionalKey}' in the second object does not exit in the first`)
+		}
+
+		const additionalKey = o_2_keys.find(key => !o_1_keys.some(k => k == key))
+		if (additionalKey)
+			return failed(`Property '${additionalKey}' in the second object does not exit in the first`)
+
+		return o_1_keys.reduce((isSame, key) => {
+			if (!isSame)
+				return isSame
+			const o_1_val = o_1[key]
+			const o_2_val = o_2[key]
+			try {
+				return objAreSame(o_1_val, o_2_val, { throwError: true })
+			} catch(err) {
+				return failed(`Differences in property '${key}': ${err.message}`)
+			}
+		}, true)
+	}
+	
+	if (o_1_type == 'array') {
+		if (o_1.length != o_2.length) {
+			return failed(`Arrays don't have the same amount of items`)
+		}
+
+		return o_1.reduce((isSame, obj_1) => {
+			if (!isSame)
+				return isSame
+			return o_2.some(obj_2 => objAreSame(obj_1, obj_2)) ? true : failed(`No objects in the second array can match object ${JSON.stringify(obj_1, null, ' ')}`)
+		}, true)
+	}
+
+	return failed(`Those 2 objects are not equal: ${o_1}, ${o_2}`) 
 }
 
 const mergeCollection = (...collections) => {
@@ -220,7 +284,6 @@ module.exports = {
 		isEmpty: isEmptyObj,
 		isObj,
 		diff: getDiff,
-		same: objAreSame,
-		arrayAreDiff: arrayObjAreDiff
+		same: objAreSame
 	}
 }

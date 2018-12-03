@@ -7,7 +7,7 @@
 */
 
 const { fetch } = require('../utils')
-const { transpileSchema, bigQueryResultToJson } = require('./format')
+const { schemaToFields, bigQueryResultToJson } = require('./format')
 
 // BigQuery Jobs APIs doc: https://cloud.google.com/bigquery/docs/reference/rest/v2/jobs/insert
 
@@ -205,9 +205,25 @@ const createTable = (projectId, db, table, schema={}, token) => Promise.resolve(
 			projectId,
 			tableId: table
 		},
-		schema: transpileSchema(schema)
+		schema: schemaToFields(schema)
 	}
 	return fetch.post(BIGQUERY_TABLE_URL(projectId,db), {
+		'Content-Type': 'application/json',
+		Authorization: `Bearer ${token}`
+	}, JSON.stringify(payload))
+})
+
+const updateTable = (projectId, db, table, schema={}, token) => Promise.resolve(null).then(() => {
+	_validateRequiredParams({ projectId, db, table, token })
+	const payload = {
+		tableReference: {
+			datasetId: db,
+			projectId,
+			tableId: table
+		},
+		schema: schemaToFields(schema)
+	}
+	return fetch.patch(BIGQUERY_TABLE_URL(projectId,db,table), {
 		'Content-Type': 'application/json',
 		Authorization: `Bearer ${token}`
 	}, JSON.stringify(payload))
@@ -228,7 +244,8 @@ module.exports = {
 		create: createTable,
 		createFromStorage: createTableFromStorage,
 		loadData: loadData,
-		insert: insertData
+		insert: insertData,
+		update: updateTable
 	},
 	job: {
 		'get': getJob
