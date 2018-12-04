@@ -251,7 +251,10 @@ const maintainTables = () =>
 						.then(() => console.log(`  - Table '${table.name}': Schema successfully updated.`))
 					: console.log(`  - Table '${table.name}': No schema updates found.`)
 				)
-		), 
+		)
+		.catch(err => {
+			console.log(`  - Table '${table.name}': Oops... An error occured: ${err.message}`)
+		}), 
 	Promise.resolve(null))
 
 console.log('\nChecking for BigQuery tables updates...')
