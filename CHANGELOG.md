@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.2.7"></a>
+## [0.2.7](https://github.com/nicolasdao/google-cloud-bigquery/compare/v0.2.6...v0.2.7) (2018-12-04)
+
+
+### Features
+
+* Add support for getting the table and db name straight from the object themselves ([098134c](https://github.com/nicolasdao/google-cloud-bigquery/commit/098134c))
+
+
+
 <a name="0.2.6"></a>
 ## [0.2.6](https://github.com/nicolasdao/google-cloud-bigquery/compare/v0.2.5...v0.2.6) (2018-12-03)
 
