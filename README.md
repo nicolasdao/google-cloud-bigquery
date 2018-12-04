@@ -1,10 +1,11 @@
 # Google Cloud BigQuery &middot;  [![NPM](https://img.shields.io/npm/v/google-cloud-bigquery.svg?style=flat)](https://www.npmjs.com/package/google-cloud-bigquery) [![Tests](https://travis-ci.org/nicolasdao/google-cloud-bigquery.svg?branch=master)](https://travis-ci.org/nicolasdao/google-cloud-bigquery) [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause) [![Neap](https://neap.co/img/made_by_neap.svg)](#this-is-what-we-re-up-to)
-__*Google Cloud BigQuery*__ is node.js package to create BigQuery table from Google Cloud Storage or load data into Google Cloud BigQuery tables including automatically updating the tables' schema.
+__*Google Cloud BigQuery*__ is a node.js package to maintain BigQuery table, either explicitely or using a Google Cloud Storage (including automatically updating the tables' schema).
 
 # Table of Contents
 
 > * [Install](#install) 
 > * [How To Use It](#how-to-use-it) 
+> * [Useful Code Snippets](#snippets-to-put-it-all-together)
 > * [About Neap](#this-is-what-we-re-up-to)
 > * [License](#license)
 
@@ -22,10 +23,10 @@ Before using this package, you must first:
 
 1. Have a Google Cloud Account.
 
-2. Have a both a BigQuery DB and a Bucket in the same region.
+2. Have a both a BigQuery DB and a Bucket in the same region (the bucket is only in case you wish to maintain BigQuery schema using data stored a Google Cloud Storage).
 
 3. Have a Service Account set up with the following 2 roles:
-	- `roles/storage.objectAdmin`
+	- `roles/storage.objectAdmin` 
 	- `roles/bigquery.admin`
 
 4. Get the JSON keys file for that Service Account above
@@ -208,12 +209,52 @@ Under the hood, this code will transform the data payload to the following:
 }
 ```
 
-This object is guaranteed to comply to the schema so as much data is being inserted.
-
+This object is guaranteed to comply to the schema. This will guarantee that all the data is inserted.
 
 > Notice the usage of the `bigQuery.job.get` to check the status of the job. The signature of that api is as follow:
 >	`bigQuery.job.get({ projectId: 'your-project-id', location: 'asia-northeast1', jobId: 'a-job-id' })`
 
+## Snippets To Put It All Together
+### Indempotent Script To Keep Your DB Tables In Sync
+
+```js
+const { join } = require('path')
+const { client } = require('google-cloud-bigquery')
+// The line below assumes you have a file 'schema.js' located under 'path-to-your-schema-file'
+// organised in a way where the 'schema' object below is structured as follow:
+// 	schema.table_01 	This is the schema of 'table_01'
+//	schema.table_02 	This is the schema of 'table_02'
+const schema = require('path-to-your-schema-file/schema.js')
+
+const bigQuery = client.new({ jsonKeyFile: join(__dirname, './service-account.json') })
+const db = bigQuery.db.get('your-dataset-id')
+
+const tbl_01 = db.table('table_01')
+const tbl_02 = db.table('table_02')
+
+const maintainTables = () =>
+	[tbl_01, tbl_02].map(table => ({ table, schema: schema[table.name] })).reduce((job, { table, schema }) => job
+		.then(() => 
+			table.exists()
+				.then(tableExists => tableExists
+					? console.log(`  - Table '${table.name}': Table already exists in DB '${db.name}'.`)
+					: Promise.resolve(console.log(`  - Table '${table.name}': Table not found. Creating it now...`))
+						.then(() => table.create.new({ schema }))
+						.then(() => console.log(`  - Table '${table.name}': Table successfully created.`))
+				)
+				.then(() => table.schema.isDiff(schema))
+				.then(schemaHasChanged => schemaHasChanged
+					? Promise.resolve(console.log(`  - Table '${table.name}': Schema changes detected in table. Updating now...`))
+						.then(() => table.schema.update(schema))
+						.then(() => console.log(`  - Table '${table.name}': Schema successfully updated.`))
+					: console.log(`  - Table '${table.name}': No schema updates found.`)
+				)
+		), 
+	Promise.resolve(null))
+
+console.log('\nChecking for BigQuery tables updates...')
+maintainTables()
+```
 
 # This Is What We re Up To
 We are Neap, an Australian Technology consultancy powering the startup ecosystem in Sydney. We simply love building Tech and also meeting new people, so don't hesitate to connect with us at [https://neap.co](https://neap.co).
