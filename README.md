@@ -26,8 +26,8 @@ Before using this package, you must first:
 2. Have a both a BigQuery DB and a Bucket in the same region (the bucket is only in case you wish to maintain BigQuery schema using data stored a Google Cloud Storage).
 
 3. Have a Service Account set up with the following 2 roles:
-	- `roles/storage.objectAdmin` 
 	- `roles/bigquery.admin`
+	- `roles/storage.objectAdmin` (only in case you wish to maintain BigQuery schema using data stored a Google Cloud Storage)
 
 4. Get the JSON keys file for that Service Account above
 
@@ -216,6 +216,8 @@ This object is guaranteed to comply to the schema. This will guarantee that all 
 
 ## Snippets To Put It All Together
 ### Indempotent Script To Keep Your DB Tables In Sync
+
+The code snippet below shows how you can create a new tables if they don't exist yet and update their schema if their schema has changed when compared with the local version. 
 
 ```js
 const { join } = require('path')
