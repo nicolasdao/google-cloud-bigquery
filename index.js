@@ -49,7 +49,9 @@ const createClient = ({ jsonKeyFile, getToken, projectDetails }) => {
 				if (!db)
 					throw new Error('Missing required argument \'db\'')
 				return { 
+					name: db,
 					table: (table) => ({
+						name: table,
 						'get': () => __getToken().then(token => bigQuery.table.get(projectId, db, table, token)),
 						'exists': () => __getToken().then(token => bigQuery.table.get(projectId, db, table, token)).then(({ status, data }) =>{
 							if (status >= 200 && status < 300)

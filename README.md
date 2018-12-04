@@ -41,15 +41,14 @@ const { client } = require('google-cloud-bigquery')
 
 const bigQuery = client.new({ jsonKeyFile: join(__dirname, './service-account.json') })
 
-const YOUR_DB = 'your-dataset-id'
-// Assumes that YOUR_DB already exists
-const db = bigQuery.db.get(YOUR_DB)
+// Assumes that 'your-dataset-id' already exists
+const db = bigQuery.db.get('your-dataset-id')
+const userTbl = db.table('user')
 
-const YOUR_TABLE = 'user'
-db.table(YOUR_TABLE).exists()
+userTbl.exists()
 	.then(yes => yes 
-		? console.log(`Table '${YOUR_TABLE}' already exists in DB '${YOUR_DB}'`)
-		: db.table(YOUR_TABLE).create.new({ 
+		? console.log(`Table '${userTbl.name}' already exists in DB '${db.name}'`)
+		: userTbl.create.new({ 
 			schema: {
 				id: 'integer',
 				username: 'string',
@@ -66,13 +65,13 @@ db.table(YOUR_TABLE).exists()
 				tags:['string'],
 				inserted_date: 'timestamp'
 			} 
-		}).then(() => console.log(`Table '${YOUR_TABLE}' successfully added to DB '${YOUR_DB}'`)))
+		}).then(() => console.log(`Table '${userTbl.name}' successfully added to DB '${db.name}'`)))
 ```
 
 ### Inserting Data
 
 ```js
-db.table(YOUR_TABLE).insert.values({ data:[{
+userTbl.insert.values({ data:[{
 		id: 1,
 		username: 'Nicolas',
 		inserted_date: new Date()
@@ -106,7 +105,7 @@ db.table(YOUR_TABLE).insert.values({ data:[{
 
 ```js
 db.query.execute({ 
-	sql:`select * from ${YOUR_DB}.${YOUR_TABLE} where id = @id`, 
+	sql:`select * from ${db.name}.${userTbl.name} where id = @id`, 
 	params: { id: 2 } 
 })
 .then(({ data }) => console.log(JSON.stringify(data, null, ' ')))
@@ -171,10 +170,10 @@ const newSchema = {
 	deleted_date: 'timestamp'
 }
 
-db.table(YOUR_TABLE).schema.isDiff(newSchema)
+userTbl.schema.isDiff(newSchema)
 	.then(yes => yes
 		? Promise.resolve(console.log(`Schema changes detected. Updating now...`))
-			.then(() => db.table(YOUR_TABLE).schema.update(newSchema))
+			.then(() => userTbl.schema.update(newSchema))
 			.then(() => console.log(`Schema successfully updated.`))
 		: console.log(`No schema updates found`)
 	)
@@ -185,7 +184,7 @@ db.table(YOUR_TABLE).schema.isDiff(newSchema)
 BigQuery casting capabilities are quite limited. When a type does not fit into the table, that row will either crashes the entire insert, or will be completely be ignored (we're using that last setting). To make sure that as much data is being inserted as possible, we've added an option called `forcedSchema` in the `db.table('some-table').insert.values` api:
 
 ```js
-db.table(YOUR_TABLE).insert.values({
+userTbl.insert.values({
 	data:{
 		id: '123.34',
 		username: { hello: 'world' },
