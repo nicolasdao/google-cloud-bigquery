@@ -9,7 +9,7 @@
 const googleAuth = require('google-auto-auth')
 const bigQuery = require('./src')
 const { fitToSchema, fieldsToSchema } = require('./src/format')
-const { obj } = require('./utils')
+const { obj, promise: { retry } } = require('./utils')
 
 const _getToken = auth => new Promise((onSuccess, onFailure) => auth.getToken((err, token) => err ? onFailure(err) : onSuccess(token)))
 const _validateRequiredParams = (params={}) => Object.keys(params).forEach(p => {
@@ -43,6 +43,12 @@ const createClient = ({ jsonKeyFile, getToken, projectDetails }) => {
 		__getToken = () => _getToken(auth)
 	}
 
+	const _retryInsert = (...args) => retry(
+		() => bigQuery.table.insert(...args),
+		() => true,
+		{ ignoreFailure: true, retryInterval: [200, 800], retryAttempts: 10 }
+	)
+
 	return {
 		db: {
 			'get': db => {
@@ -70,7 +76,7 @@ const createClient = ({ jsonKeyFile, getToken, projectDetails }) => {
 							values: ({ data, templateSuffix, skipInvalidRows=false, forcedSchema, insert }) => __getToken().then(token => {
 								const d = Array.isArray(data) ? data : [data]
 								const dd = forcedSchema ? d.map(x => fitToSchema(x,forcedSchema)) : d
-								const _insert = insert || bigQuery.table.insert
+								const _insert = insert || _retryInsert
 								return _insert(projectId, db, table, dd, token, { templateSuffix, skipInvalidRows }).then(res => {
 									res = res || {}
 									res.payload = dd
