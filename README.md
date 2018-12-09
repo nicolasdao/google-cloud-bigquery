@@ -234,8 +234,9 @@ const db = bigQuery.db.get('your-dataset-id')
 const tbl_01 = db.table('table_01')
 const tbl_02 = db.table('table_02')
 
-const maintainTables = () =>
-	[tbl_01, tbl_02].map(table => ({ table, schema: schema[table.name] })).reduce((job, { table, schema }) => job
+const maintainTablesScript = () => {
+	console.log('\nChecking for BigQuery tables updates...')
+	return [tbl_01, tbl_02].map(table => ({ table, schema: schema[table.name] })).reduce((job, { table, schema }) => job
 		.then(() => 
 			table.exists()
 				.then(tableExists => tableExists
@@ -256,9 +257,9 @@ const maintainTables = () =>
 			console.log(`  - Table '${table.name}': Oops... An error occured: ${err.message}`)
 		}), 
 	Promise.resolve(null))
+}
 
-console.log('\nChecking for BigQuery tables updates...')
-maintainTables()
+maintainTablesScript()
 ```
 
 # This Is What We re Up To
