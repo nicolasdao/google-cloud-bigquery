@@ -23,7 +23,16 @@ Before using this package, you must first:
 
 1. Have a Google Cloud Account.
 
-2. Have a both a BigQuery DB and a Bucket in the same region (the bucket is only in case you wish to maintain BigQuery schema using data stored a Google Cloud Storage).
+2. Have a both a BigQuery DB and a Bucket in the same region (the bucket is only in case you wish to maintain BigQuery schema using data stored a Google Cloud Storage). As of December 2018, BigQuery is only supported in the following locations:
+	- asia-northeast1 (Tokyo)
+	- asia-east1 (Taiwan)
+	- asia-southeast1 (Singapore)
+	- australia-southeast1 (Sydney)
+	- europe-north1 (Finland)
+	- europe-west2 (London)
+	- us-east4 (Northern Virginia)
+	- eu (Multi regions in the EU)
+	- us (Multi regions in the US)
 
 3. Have a Service Account set up with the following 2 roles:
 	- `roles/bigquery.admin`
