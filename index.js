@@ -20,7 +20,15 @@ const _validateRequiredParams = (params={}) => Object.keys(params).forEach(p => 
 const _retryFn = (fn, options={}) => retry(
 	fn, 
 	() => true, 
-	{ ignoreFailure: true, retryInterval: [500, 2000], timeOut: options.timeout || 10000 }) 
+	{ ignoreFailure: true, retryInterval: [500, 2000], timeOut: options.timeout || 10000 })
+
+const _throwHttpErrorIfBadStatus = res => Promise.resolve(null).then(() => {
+	if (res && res.status && res.status >= 400) {
+		const errorMsg = `Failed with error ${res.status}.${res.data ? ` Details:\n${JSON.stringify(res.data, null, ' ')}` : ''}`
+		throw new Error(errorMsg)
+	}
+	return res 
+}) 
 
 /**
  * [description]
@@ -91,7 +99,7 @@ const createClient = ({ jsonKeyFile, getToken, projectDetails }) => {
 									res.payload = dd
 									return res
 								})
-							})
+							}).then(_throwHttpErrorIfBadStatus)
 						},
 						create: {
 							new: ({ schema={} }) => __getToken().then(token => bigQuery.table.create(projectId, db, table, schema, token)).then(({ data }) => data),
@@ -118,6 +126,7 @@ const createClient = ({ jsonKeyFile, getToken, projectDetails }) => {
 							.then(token => _retryFn(
 								() => bigQuery.query.execute(projectId, location_id, sql, params, token, { pageSize, timeout, useLegacySql }),
 								{ timeout }))
+							.then(_throwHttpErrorIfBadStatus)
 							.then(({ data }) => data)
 					},
 					exists: () => __getToken().then(token => bigQuery.db.get(projectId, db, token)).then(({ status, data }) =>{
