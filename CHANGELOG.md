@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.2.10"></a>
+## [0.2.10](https://github.com/nicolasdao/google-cloud-bigquery/compare/v0.2.9...v0.2.10) (2018-12-10)
+
+
+### Features
+
+* Add support for safeMode when inserting huge amount of rows ([579c959](https://github.com/nicolasdao/google-cloud-bigquery/commit/579c959))
+
+
+
 <a name="0.2.9"></a>
 ## [0.2.9](https://github.com/nicolasdao/google-cloud-bigquery/compare/v0.2.8...v0.2.9) (2018-12-09)
 
