@@ -111,6 +111,20 @@ userTbl.insert.values({ data:[{
 })
 ```
 
+#### IMPORTANT NOTE ABOUT QUOTAS AND LIMITS
+
+Notice that the `data` input accept both single objects or array of objects. Though BigQuery can ingest up to 10,000 rows per request and 100,000 rows per seconds, it is recommended to keep the maximum amount of rows per request to 500. You can read more about the quotas and limits at [https://cloud.google.com/bigquery/quotas#streaming_inserts](https://cloud.google.com/bigquery/quotas#streaming_inserts).
+
+To prevent inserting more than 500 rows per request, you can either code it yourself, or rely on our own implementation using the `safeMode` flag as follow:
+
+```js
+userTbl.insert.values({ data: lotsOfUsers, safeMode: true })
+	.then(() => console.log(`All users inserted`))
+```
+
+This `safeMode` flag will check that there is less than 500 items in the _lotsOfUsers_ array. If there are more than 500 items, the array is broken down in batches of 500 items which are then inserted sequentially. That means that if you're inserting 5000 users, there will be 10 sequential request of 500 users.
+
+
 ### Getting Data
 
 ```js
