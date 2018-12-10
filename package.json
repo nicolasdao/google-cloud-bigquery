@@ -21,7 +21,7 @@
   ],
   "homepage": "https://github.com/nicolasdao/google-cloud-bigquery#readme",
   "scripts": {
-    "lint": "eslint index.js src/ test/ --fix",
+    "lint": "eslint index.js src/ utils/ test/ --fix",
     "push": "git push --follow-tags origin master && npm publish",
     "rls": "standard-version --release-as",
     "test": "mocha",

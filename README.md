@@ -5,6 +5,7 @@ __*Google Cloud BigQuery*__ is a node.js package to maintain BigQuery table, eit
 
 > * [Install](#install) 
 > * [How To Use It](#how-to-use-it) 
+> * [Extra Precautions To Making Robust Queries](#extra-precautions-to-making-robust-queries)
 > * [Useful Code Snippets](#snippets-to-put-it-all-together)
 > * [About Neap](#this-is-what-we-re-up-to)
 > * [License](#license)
@@ -132,7 +133,7 @@ db.query.execute({
 	sql:`select * from ${db.name}.${userTbl.name} where id = @id`, 
 	params: { id: 2 } 
 })
-.then(({ data }) => console.log(JSON.stringify(data, null, ' ')))
+.then(data => console.log(JSON.stringify(data, null, ' ')))
 
 // Query Output
 // ============
@@ -203,7 +204,8 @@ userTbl.schema.isDiff(newSchema)
 	)
 ```
 
-## Extra Precautions While Inserting Data
+## Extra Precautions To Making Robust Queries
+### Avoiding Schema Errors When Inserting Data
 
 BigQuery casting capabilities are quite limited. When a type does not fit into the table, that row will either crashes the entire insert, or will be completely be ignored (we're using that last setting). To make sure that as much data is being inserted as possible, we've added an option called `forcedSchema` in the `db.table('some-table').insert.values` api:
 
@@ -236,6 +238,25 @@ This object is guaranteed to comply to the schema. This will guarantee that all 
 
 > Notice the usage of the `bigQuery.job.get` to check the status of the job. The signature of that api is as follow:
 >	`bigQuery.job.get({ projectId: 'your-project-id', location: 'asia-northeast1', jobId: 'a-job-id' })`
+
+### Avoiding Network Errors
+
+Networks errors (e.g. socket hang up, connect ECONNREFUSED) are a fact of life. To deal with those undeterministic errors, this library uses a simple exponential back off retry strategy, which will reprocess your read or write request for 10 seconds by default. You can increase that retry period as follow:
+
+```js
+// Retry timeout for QUERY
+db.query.execute({ 
+	sql:`select * from ${db.name}.${userTbl.name} where id = @id`, 
+	params: { id: 2 },
+	timeout: 30000		// 30 seconds retry period timeout
+})
+
+// Retry timeout for INSERT
+userTbl.insert.values({
+	data: users,
+	timeout: 30000 		// 30 seconds retry period timeout
+})
+```
 
 ## Snippets To Put It All Together
 ### Indempotent Script To Keep Your DB Tables In Sync

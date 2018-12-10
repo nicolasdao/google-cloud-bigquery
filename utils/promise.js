@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
 */
 
-const { obj: { merge } } = require('./core')
+const { obj: { merge }, math } = require('./core')
 const { arities } = require('./functional')
 
 const delay = timeout => new Promise(onSuccess => setTimeout(onSuccess, timeout))
@@ -51,7 +51,8 @@ const check = (request, verify, options={}) => request(options.nextState).then(r
  * @param  {Number}   options.attemptsCount   	Current retry count. When that counter reaches the 'retryAttempts', the function stops.
  * @param  {Number}   options.timeOut   		If specified, 'retryAttempts' and 'attemptsCount' are ignored
  * @param  {Number}   options.retryInterval   	default: 5000. Time interval in milliseconds between each retry. It can also be a 2 items array.
- *                                             	In that case, the retryInterval is a random number between the 2 ranges (e.g., [10, 100] => 54)
+ *                                             	In that case, the retryInterval is a random number between the 2 ranges (e.g., [10, 100] => 54).
+ *                                             	The retry strategy increases the 'retryInterval' by a factor 1.5 after each failed attempt.
  * @param  {Boolean}  options.ignoreError   	In case of constant failure to pass the 'successFn' test, this function will either throw an error
  *                                           	or return the current result without throwing an error if this flag is set to true.
  * @param  {String}   options.errorMsg   		Customize the exception message in case of failure.
@@ -84,6 +85,7 @@ const retry = arities(
 						return data
 					else if ((!error && !passed) || (error && passed)) {
 						let { retryAttempts=5, retryInterval=5000, attemptsCount=0, timeOut=null, startTime=null } = options
+						const delayFactor = (attemptsCount+1) <= 1 ? 1 : Math.pow(1.5, attemptsCount)
 						if (timeOut > 0) {
 							startTime = startTime || start
 							if (Date.now() - startTime < timeOut) {
@@ -99,16 +101,19 @@ const retry = arities(
 									})()
 									: (explicitRetryInterval || retryInterval)
 
-								return delay(i).then(() => failureFn 
-									? retry(fn, successFn, failureFn, merge(options, { startTime }))
-									: retry(fn, successFn, merge(options, { startTime })))
+								const delayMs = Math.round(delayFactor*i)
+
+								return delay(delayMs).then(() => failureFn 
+									? retry(fn, successFn, failureFn, merge(options, { startTime, attemptsCount:attemptsCount+1 }))
+									: retry(fn, successFn, merge(options, { startTime, attemptsCount:attemptsCount+1 })))
 							} else
 								throw new Error('timeout')
-						} else if (attemptsCount < retryAttempts)
-							return delay(retryInterval).then(() => failureFn
+						} else if (attemptsCount < retryAttempts) {
+							const delayMs = Math.round(delayFactor*retryInterval)
+							return delay(delayMs).then(() => failureFn
 								? retry(fn, successFn, failureFn, merge(options, { attemptsCount:attemptsCount+1 }))
 								: retry(fn, successFn, merge(options, { attemptsCount:attemptsCount+1 })))
-						else if (options.ignoreError)
+						} else if (options.ignoreError)
 							return data
 						else 
 							throw new Error(options.errorMsg ? options.errorMsg : `${retryAttempts} attempts to retry the procedure failed to pass the test`)

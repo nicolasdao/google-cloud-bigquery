@@ -17,6 +17,11 @@ const _validateRequiredParams = (params={}) => Object.keys(params).forEach(p => 
 		throw new Error(`Parameter '${p}' is required.`)
 })
 
+const _retryFn = (fn, options={}) => retry(
+	fn, 
+	() => true, 
+	{ ignoreFailure: true, retryInterval: [500, 2000], timeOut: options.timeout || 10000 }) 
+
 /**
  * [description]
  * @param  {[type]} options.jsonKeyFile    [description]
@@ -50,11 +55,7 @@ const createClient = ({ jsonKeyFile, getToken, projectDetails }) => {
 					job.then(() => _retryInsert(projectId, db, table, dataBatch, token, obj.merge(options, { safeMode: false }))), 
 				Promise.resolve(null))
 		} else
-			return retry(
-				() => bigQuery.table.insert(projectId, db, table, data, token, options),
-				() => true,
-				{ ignoreFailure: true, retryInterval: [200, 800], retryAttempts: 10 }
-			)
+			return _retryFn(() => bigQuery.table.insert(projectId, db, table, data, token, options), options)
 	}
 
 	return {
@@ -66,7 +67,7 @@ const createClient = ({ jsonKeyFile, getToken, projectDetails }) => {
 					name: db,
 					table: (table) => ({
 						name: table,
-						'get': () => __getToken().then(token => bigQuery.table.get(projectId, db, table, token)),
+						'get': () => __getToken().then(token => bigQuery.table.get(projectId, db, table, token)).then(({ data }) => data),
 						'exists': () => __getToken().then(token => bigQuery.table.get(projectId, db, table, token)).then(({ status, data }) =>{
 							if (status >= 200 && status < 300)
 								return true
@@ -81,11 +82,11 @@ const createClient = ({ jsonKeyFile, getToken, projectDetails }) => {
 						}),
 						insert: {
 							fromStorage: ({ sources=[] }) => __getToken().then(token => bigQuery.table.loadData(projectId, db, table, sources, token)),
-							values: ({ data, templateSuffix, skipInvalidRows=false, forcedSchema, insert, safeMode=false }) => __getToken().then(token => {
+							values: ({ data, templateSuffix, skipInvalidRows=false, forcedSchema, insert, safeMode=false, timeout }) => __getToken().then(token => {
 								const d = Array.isArray(data) ? data : [data]
 								const dd = forcedSchema ? d.map(x => fitToSchema(x,forcedSchema)) : d
 								const _insert = insert || _retryInsert
-								return _insert(projectId, db, table, dd, token, { templateSuffix, skipInvalidRows, safeMode }).then(res => {
+								return _insert(projectId, db, table, dd, token, { templateSuffix, skipInvalidRows, safeMode, timeout }).then(res => {
 									res = res || {}
 									res.payload = dd
 									return res
@@ -93,8 +94,8 @@ const createClient = ({ jsonKeyFile, getToken, projectDetails }) => {
 							})
 						},
 						create: {
-							new: ({ schema={} }) => __getToken().then(token => bigQuery.table.create(projectId, db, table, schema, token)),
-							fromStorage: ({ sources=[] }) => __getToken().then(token => bigQuery.table.createFromStorage(projectId, db, table, sources, token))
+							new: ({ schema={} }) => __getToken().then(token => bigQuery.table.create(projectId, db, table, schema, token)).then(({ data }) => data),
+							fromStorage: ({ sources=[] }) => __getToken().then(token => bigQuery.table.createFromStorage(projectId, db, table, sources, token)).then(({ data }) => data)
 						},
 						schema: {
 							isDiff: (schema) => __getToken().then(token => bigQuery.table.get(projectId, db, table, token)).then(({ data }) => {
@@ -109,12 +110,15 @@ const createClient = ({ jsonKeyFile, getToken, projectDetails }) => {
 								const currentSchema = fieldsToSchema(data.schema.fields)
 								return !obj.same(schema, currentSchema)
 							}),
-							update: (schema) => __getToken().then(token => bigQuery.table.update(projectId, db, table, schema, token))
+							update: (schema) => __getToken().then(token => bigQuery.table.update(projectId, db, table, schema, token)).then(({ data }) => data)
 						}
 					}),
 					query: {
 						execute: ({ sql, params, pageSize=1000, timeout=10000, useLegacySql=false }) => __getToken()
-							.then(token => bigQuery.query.execute(projectId, location_id, sql, params, token, { pageSize, timeout, useLegacySql }))
+							.then(token => _retryFn(
+								() => bigQuery.query.execute(projectId, location_id, sql, params, token, { pageSize, timeout, useLegacySql }),
+								{ timeout }))
+							.then(({ data }) => data)
 					},
 					exists: () => __getToken().then(token => bigQuery.db.get(projectId, db, token)).then(({ status, data }) =>{
 						if (status >= 200 && status < 300)
