@@ -5,7 +5,7 @@ __*Google Cloud BigQuery*__ is a node.js package to maintain BigQuery table, eit
 
 > * [Install](#install) 
 > * [How To Use It](#how-to-use-it) 
-> * [Extra Precautions To Making Robust Queries](#extra-precautions-to-making-robust-queries)
+> * [Best Practices - Reliability & Performances](#best-practices-reliability--performances)
 > * [Useful Code Snippets](#snippets-to-put-it-all-together)
 > * [About Neap](#this-is-what-we-re-up-to)
 > * [License](#license)
@@ -204,10 +204,38 @@ userTbl.schema.isDiff(newSchema)
 	)
 ```
 
-## Extra Precautions To Making Robust Queries
-### Avoiding Schema Errors When Inserting Data
+# Best Practices - Reliability & Performances
+## Inserting A Lot Of Rows At Once
 
-BigQuery casting capabilities are quite limited. When a type does not fit into the table, that row will either crashes the entire insert, or will be completely be ignored (we're using that last setting). To make sure that as much data is being inserted as possible, we've added an option called `forcedSchema` in the `db.table('some-table').insert.values` api:
+All insert operations use the _BigQuery Streaming Insert_ API. There are many quotas limits (more details at [https://cloud.google.com/bigquery/quotas#streaming_inserts](https://cloud.google.com/bigquery/quotas#streaming_inserts)), but the top ones to be aware of are:
+
+- Each row cannot be larger than __1 MB__.
+- The maximum number of rows that can be inserted at once is __10,000__, but the documentation recommends to limit those batch inserts to __500__ for performance reasons.
+- The maximum size of all rows in a single insert cannot exceed __10 MB__. Google does not recommend smaller inserts to improve performances, but in our experience, limiting to _2 MB_ improves performance and reliability (it all depends on your network conditions).
+
+To alleviate the need to pre-process your data before inserting all your rows, we've added a configurable __*safeMode*__ in our insert API:
+
+```js
+userTbl.insert.values({
+	data: veryBigArrayOfUsers,
+	safeMode: true
+})
+```
+
+This will automatically insert all those rows sequentially by batch of _2 MB_ or _500_ rows (which ever is reached first). You can configure that safe mode as follow:
+
+```js
+userTbl.insert.values({
+	data: veryBigArrayOfUsers,
+	safeMode: true,
+	batchSize: 5*1024*1024, // 5 MB max instead of the default 2 MB.
+	batchCount: 1000 		// 1000 rows max instead of the default 500.
+})
+```
+
+## Avoiding Schema Errors When Inserting Data
+
+BigQuery casting capabilities are quite limited. When a type does not fit into the table, that row will either crashes the entire insert, or will be completely ignored (we're using that last setting). To make sure that as much data is being inserted as possible, we've added an option called `forcedSchema` in the `db.table('some-table').insert.values` api:
 
 ```js
 userTbl.insert.values({
@@ -234,12 +262,9 @@ Under the hood, this code will transform the data payload to the following:
 }
 ```
 
-This object is guaranteed to comply to the schema. This will guarantee that all the data is inserted.
+This object is guaranteed to comply to the schema. This will guarantee that all the data are inserted.
 
-> Notice the usage of the `bigQuery.job.get` to check the status of the job. The signature of that api is as follow:
->	`bigQuery.job.get({ projectId: 'your-project-id', location: 'asia-northeast1', jobId: 'a-job-id' })`
-
-### Avoiding Network Errors
+## Avoiding Network Errors
 
 Networks errors (e.g. socket hang up, connect ECONNREFUSED) are a fact of life. To deal with those undeterministic errors, this library uses a simple exponential back off retry strategy, which will reprocess your read or write request for 10 seconds by default. You can increase that retry period as follow:
 
@@ -258,8 +283,8 @@ userTbl.insert.values({
 })
 ```
 
-## Snippets To Put It All Together
-### Indempotent Script To Keep Your DB Tables In Sync
+# Snippets To Put It All Together
+## Indempotent Script To Keep Your DB Tables In Sync
 
 The code snippet below shows how you can create a new tables if they don't exist yet and update their schema if their schema has changed when compared with the local version. 
 

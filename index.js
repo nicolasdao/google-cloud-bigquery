@@ -9,7 +9,11 @@
 const googleAuth = require('google-auto-auth')
 const bigQuery = require('./src')
 const { fitToSchema, fieldsToSchema } = require('./src/format')
-const { obj, promise: { retry }, collection } = require('./utils')
+const { obj, promise: { retry } } = require('./utils')
+
+const TWO_MB = 2*1024*1024
+const TEN_MB = 10*1024*1024
+const DEFAULT_MAX_ROW_INSERT = 500
 
 const _getToken = auth => new Promise((onSuccess, onFailure) => auth.getToken((err, token) => err ? onFailure(err) : onSuccess(token)))
 const _validateRequiredParams = (params={}) => Object.keys(params).forEach(p => {
@@ -57,9 +61,50 @@ const createClient = ({ jsonKeyFile, getToken, projectDetails }) => {
 		__getToken = () => _getToken(auth)
 	}
 
+	/**
+	 * [description]
+	 * @param  {[type]}  projectId 				[description]
+	 * @param  {[type]}  db        				[description]
+	 * @param  {[type]}  table     				[description]
+	 * @param  {[type]}  data      				[description]
+	 * @param  {[type]}  token     				[description]
+	 * @param  {Boolean} options.safeMode   	[description]
+	 * @param  {Number}  options.batchSize   	[description]
+	 * @param  {Number}  options.batchCount 	[description]
+	 * @return {[type]}           [description]
+	 */
 	const _retryInsert = (projectId, db, table, data, token, options={}) => {
-		if (options.safeMode && data && data.length > 500) {
-			return collection.batch(data, 500)
+		if (options.safeMode) {
+			data = data || []
+			let batchSize = (options || {}).batchSize || TWO_MB
+			if (batchSize > TEN_MB)
+				batchSize = TEN_MB
+			const batchCount = (options || {}).batchCount || DEFAULT_MAX_ROW_INSERT
+
+			const { batchRows, currentBatch } = data.filter(x => x).reduce((acc,d) => {
+				const byteSize = JSON.stringify(d).length
+				const newByteSize = acc.currentBatchByteSize + byteSize
+				const newSize = acc.currentBatchSize + 1
+
+				if (newByteSize >= batchSize || newSize >= batchCount) {
+					if (acc.currentBatch.length > 0)
+						acc.batchRows.push(acc.currentBatch)
+					acc.currentBatchByteSize = byteSize
+					acc.currentBatchSize = 1
+					acc.currentBatch = [d]
+				} else {
+					acc.currentBatchByteSize = newByteSize
+					acc.currentBatchSize = newSize
+					acc.currentBatch.push(d)
+				}
+				
+				return acc
+			}, { currentBatchByteSize:0, currentBatchSize:0, currentBatch:[], batchRows:[] })
+
+			if (currentBatch.length > 0)
+				batchRows.push(currentBatch)
+
+			return batchRows
 				.reduce((job, dataBatch) => 
 					job.then(() => _retryInsert(projectId, db, table, dataBatch, token, obj.merge(options, { safeMode: false }))), 
 				Promise.resolve(null))
@@ -91,11 +136,24 @@ const createClient = ({ jsonKeyFile, getToken, projectDetails }) => {
 						}),
 						insert: {
 							fromStorage: ({ sources=[] }) => __getToken().then(token => bigQuery.table.loadData(projectId, db, table, sources, token)),
-							values: ({ data, templateSuffix, skipInvalidRows=false, forcedSchema, insert, safeMode=false, timeout }) => __getToken().then(token => {
+							/**
+							 * [description]
+							 * @param  {[type]}  data            			[description]
+							 * @param  {[type]}  options.templateSuffix  	[description]
+							 * @param  {Boolean} options.skipInvalidRows 	[description]
+							 * @param  {[type]}  options.forcedSchema    	[description]
+							 * @param  {[type]}  options.insert          	[description]
+							 * @param  {Boolean} options.safeMode        	[description]
+							 * @param  {Number}  options.batchSize   		[description]
+							 * @param  {Number}  options.batchCount 		[description]
+							 * @param  {[type]}  options.timeout         	[description]
+							 * @return {[type]}                          	[description]
+							 */
+							values: ({ data, templateSuffix, skipInvalidRows=false, forcedSchema, insert, safeMode=false, batchSize, batchCount, timeout }) => __getToken().then(token => {
 								const d = Array.isArray(data) ? data : [data]
 								const dd = forcedSchema ? d.map(x => fitToSchema(x,forcedSchema)) : d
 								const _insert = insert || _retryInsert
-								return _insert(projectId, db, table, dd, token, { templateSuffix, skipInvalidRows, safeMode, timeout }).then(res => {
+								return _insert(projectId, db, table, dd, token, { templateSuffix, skipInvalidRows, safeMode, timeout, batchSize, batchCount }).then(res => {
 									res = res || {}
 									res.payload = dd
 									return res
