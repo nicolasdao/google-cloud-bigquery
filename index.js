@@ -20,6 +20,7 @@ const _validateRequiredParams = (params={}) => Object.keys(params).forEach(p => 
 const _retryFn = (fn, options={}) => retry(
 	fn, 
 	() => true, 
+	err => ((err || {}).message || '').indexOf('BigQuery streaming insert quotas exceeded') < 0,
 	{ ignoreFailure: true, retryInterval: [500, 2000], timeOut: options.timeout || 10000 })
 
 const _throwHttpErrorIfBadStatus = res => Promise.resolve(null).then(() => {

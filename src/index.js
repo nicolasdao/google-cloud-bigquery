@@ -106,7 +106,25 @@ const insertData = (projectId, db, table, values=[], token, options={}) => Promi
 	if (!values.some(x => x))
 		return { status: 200, data: 'No data inserted as no data were passed.' }
 
-	const rows = values.map(v => ({ json: v }))
+	const { totalSizeMB, maxRowSizeMB, rows } = values.reduce((acc,v) => {
+		const row = { json: v }
+		const rowSizeMB = (JSON.stringify(v) || '').length/1024/1024
+		acc.totalSizeMB += rowSizeMB
+		if (acc.maxRowSizeMB < rowSizeMB)
+			acc.maxRowSizeMB = rowSizeMB
+		acc.rows.push(row)
+		return acc
+	}, { totalSizeMB:0 , maxRowSizeMB:0, rows:[] })
+
+	if (rows.length > 10000)
+		throw new Error(`BigQuery streaming insert quotas exceeded. Cannot insert more than 10,000 rows per request (current: ${rows.length})`)
+
+	if (totalSizeMB > 10)
+		throw new Error(`BigQuery streaming insert quotas exceeded. Cannot insert more than 10 MB per request (current: ${totalSizeMB.toFixed(2)} MB)`)
+
+	if (maxRowSizeMB > 1)
+		throw new Error(`BigQuery streaming insert quotas exceeded. Cannot insert row larger than 1 MB (current largest row: ${maxRowSizeMB.toFixed(2)} MB)`)
+
 	let payload = {
 		ignoreUnknownValues: true,
 		rows

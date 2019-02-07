@@ -244,14 +244,14 @@ This object is guaranteed to comply to the schema. This will guarantee that all 
 Networks errors (e.g. socket hang up, connect ECONNREFUSED) are a fact of life. To deal with those undeterministic errors, this library uses a simple exponential back off retry strategy, which will reprocess your read or write request for 10 seconds by default. You can increase that retry period as follow:
 
 ```js
-// Retry timeout for QUERY
+// Retry timeout for QUERIES
 db.query.execute({ 
 	sql:`select * from ${db.name}.${userTbl.name} where id = @id`, 
 	params: { id: 2 },
 	timeout: 30000		// 30 seconds retry period timeout
 })
 
-// Retry timeout for INSERT
+// Retry timeout for INSERTS
 userTbl.insert.values({
 	data: users,
 	timeout: 30000 		// 30 seconds retry period timeout
