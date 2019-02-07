@@ -5,7 +5,7 @@ __*Google Cloud BigQuery*__ is a node.js package to maintain BigQuery table, eit
 
 > * [Install](#install) 
 > * [How To Use It](#how-to-use-it) 
-> * [Best Practices - Reliability & Performances](#best-practices-reliability--performances)
+> * [Best Practices - Reliability & Performances](#best-practices---reliability--performances)
 > * [Useful Code Snippets](#snippets-to-put-it-all-together)
 > * [About Neap](#this-is-what-we-re-up-to)
 > * [License](#license)
