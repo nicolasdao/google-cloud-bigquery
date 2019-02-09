@@ -229,7 +229,7 @@ userTbl.insert.values({
 	data: veryBigArrayOfUsers,
 	safeMode: true,
 	batchSize: 5*1024*1024, // 5 MB max instead of the default 2 MB.
-	batchCount: 1000 		// 1000 rows max instead of the default 500.
+	batchCount: 1000 	// 1000 rows max instead of the default 500.
 })
 ```
 
