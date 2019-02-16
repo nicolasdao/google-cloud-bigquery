@@ -50,14 +50,7 @@ const execute = (projectId, location, query, params={}, token, options={}) => Pr
 		const val = params[key]
 		let v = `${val}`
 		let t = val instanceof Date ? 'timestamp' : typeof(val)
-		if (t == 'string') {
-			const dd = new Date(val)
-			const d = dd.toString().toLowerCase()
-			if (d != 'invalid date') {
-				t = 'timestamp'
-				v = dd.toISOString()
-			}
-		} else if (t == 'timestamp')
+		if (t == 'timestamp')
 			v = val.toISOString()
 		else if (t == 'number') {
 			if ((Math.round(val) - val) != 0) {

@@ -421,7 +421,7 @@ const bigQueryResultToJson = (data={}) => {
 			return acc 
 		}, {}))
 	} else
-		return []
+		return data || []
 }
 
 module.exports = {
