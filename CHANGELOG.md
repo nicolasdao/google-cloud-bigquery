@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.5.0](https://github.com/nicolasdao/google-cloud-bigquery/compare/v0.4.3...v0.5.0) (2020-08-01)
+
+
+### Features
+
+* Add support for creating a client using explicit creds or environment variables ([f0da246](https://github.com/nicolasdao/google-cloud-bigquery/commit/f0da246edda1290aea375fc8eeaf28707116872d))
+
 ### [0.4.3](https://github.com/nicolasdao/google-cloud-bigquery/compare/v0.4.2...v0.4.3) (2020-07-16)
 
 
