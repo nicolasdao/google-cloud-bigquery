@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.5.2](https://github.com/nicolasdao/google-cloud-bigquery/compare/v0.5.1...v0.5.2) (2020-08-01)
+
+
+### Bug Fixes
+
+* Creating a client without any argument fails ([c1e87f7](https://github.com/nicolasdao/google-cloud-bigquery/commit/c1e87f76406702adc83f6499a752e44ffd537232))
+
 ### [0.5.1](https://github.com/nicolasdao/google-cloud-bigquery/compare/v0.5.0...v0.5.1) (2020-08-01)
 
 
