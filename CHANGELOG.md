@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.5.1](https://github.com/nicolasdao/google-cloud-bigquery/compare/v0.5.0...v0.5.1) (2020-08-01)
+
+
+### Bug Fixes
+
+* Invalid logic when deciding which credential strategy to choose to create a client ([bc73bce](https://github.com/nicolasdao/google-cloud-bigquery/commit/bc73bce570622565fb32070a4c94d2750a6a5b27))
+* Vulnerabilities ([7f9640c](https://github.com/nicolasdao/google-cloud-bigquery/commit/7f9640cc0258a064b895fa0e834ae8a5fd480d1c))
+
 ## [0.5.0](https://github.com/nicolasdao/google-cloud-bigquery/compare/v0.4.3...v0.5.0) (2020-08-01)
 
 
