@@ -42,7 +42,10 @@ Before using this package, you must first:
 	- `roles/bigquery.admin`
 	- `roles/storage.objectAdmin` (only in case you wish to maintain BigQuery schema using data stored a Google Cloud Storage)
 4. Get the JSON keys file for that Service Account above.
-5. Save that JSON key into a `service-account.json` file (make sure it is located under a path that is accessible to your app), or save the following properties to either manually set up the client or set up environment variables.
+5. Save that JSON key into a `service-account.json` file (make sure it is located under a path that is accessible to your app), or save the following properties to either manually set up the client or set up environment variables:
+	- `project_id`
+	- `client_email`
+	- `private_key`
 6. Modify the `service-account.json` above by adding a new `location_id` property with the location ID of your BigQuery service (e.g., `australia-southeast1`).
 
 ## Creating a client
