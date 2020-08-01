@@ -43,16 +43,14 @@ const _throwHttpErrorIfBadStatus = res => Promise.resolve(null).then(() => {
  * @return {String}
  */
 const createClient = ({ jsonKeyFile, credentials, getToken }) => {
-	const noCreds = !credentials
-	credentials = credentials || {}
-	let { project_id:projectId, location_id, client_email, private_key } = credentials || require(jsonKeyFile)
+	let { project_id:projectId, location_id, client_email, private_key } = credentials ? credentials : jsonKeyFile ? require(jsonKeyFile) : {}
 	
 	projectId = projectId || process.env.GOOGLE_CLOUD_BIGQUERY_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT_ID
 	location_id = location_id || process.env.GOOGLE_CLOUD_BIGQUERY_LOCATION_ID || process.env.GOOGLE_CLOUD_LOCATION_ID
 	client_email = client_email || process.env.GOOGLE_CLOUD_BIGQUERY_CLIENT_EMAIL || process.env.GOOGLE_CLOUD_CLIENT_EMAIL
 	private_key = private_key || process.env.GOOGLE_CLOUD_BIGQUERY_PRIVATE_KEY || process.env.GOOGLE_CLOUD_PRIVATE_KEY
 
-	const errorHeader = !noCreds 
+	const errorHeader = credentials
 		? 'The \'credentials\' argument is missing the required' 
 		: jsonKeyFile 
 			? `The service account JSON key file ${jsonKeyFile} is missing the required` 
