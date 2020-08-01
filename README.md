@@ -4,7 +4,13 @@ __*Google Cloud BigQuery*__ is a node.js package to maintain BigQuery table, eit
 # Table of Contents
 
 > * [Install](#install) 
-> * [How To Use It](#how-to-use-it) 
+> * [Getting started](#getting-started) 
+>	- [Prerequisite](#prerequisite)
+>	- [Creating a client](#creating-a-client)
+>	- [Creating a new table](#creating-a-new-table)
+>	- [Inserting data](#inserting-data)
+>	- [Getting data](#getting-data)
+>	- [Updating the table's schema](#updating-the-tables-schema)
 > * [Best Practices - Reliability & Performances](#best-practices---reliability--performances)
 > * [Useful Code Snippets](#snippets-to-put-it-all-together)
 > * [About Neap](#this-is-what-we-re-up-to)
@@ -13,17 +19,15 @@ __*Google Cloud BigQuery*__ is a node.js package to maintain BigQuery table, eit
 
 # Install
 ```
-npm i google-cloud-bigquery --save
+npm i google-cloud-bigquery
 ```
 
-# How To Use It
-
+# Getting started
 ## Prerequisite
 
 Before using this package, you must first:
 
 1. Have a Google Cloud Account.
-
 2. Have a both a BigQuery DB and a Bucket in the same region (the bucket is only in case you wish to maintain BigQuery schema using data stored a Google Cloud Storage). As of December 2018, BigQuery is only supported in the following locations:
 	- asia-northeast1 (Tokyo)
 	- asia-east1 (Taiwan)
@@ -34,17 +38,57 @@ Before using this package, you must first:
 	- us-east4 (Northern Virginia)
 	- eu (Multi regions in the EU)
 	- us (Multi regions in the US)
-
 3. Have a Service Account set up with the following 2 roles:
 	- `roles/bigquery.admin`
 	- `roles/storage.objectAdmin` (only in case you wish to maintain BigQuery schema using data stored a Google Cloud Storage)
+4. Get the JSON keys file for that Service Account above.
+5. Save that JSON key into a `service-account.json` file (make sure it is located under a path that is accessible to your app), or save the following properties to either manually set up the client or set up environment variables.
+6. Modify the `service-account.json` above by adding a new `location_id` property with the location ID of your BigQuery service (e.g., `australia-southeast1`).
 
-4. Get the JSON keys file for that Service Account above
+## Creating a client
 
-5. Save that JSON key into a `service-account.json` file. Make sure it is located under a path that is accessible to your app (the root folder usually).
+There are three different ways to create a client:
+1. [Using the `service-account.json`](#using-the-service-accountjson)
+2. [Using the service account's credentials explicitly](#using-the-service-accounts-credentials-explicitly)
+3. [Using environment variables](#using-environment-variables)
 
-## Show Me The Code
-### Creating A New Table
+### Using the `service-account.json`
+
+```js
+const { join } = require('path')
+const { client } = require('google-cloud-bigquery')
+
+const bigQuery = client.new({ jsonKeyFile: join(__dirname, './service-account.json') })
+```
+
+### Using the service account's credentials explicitly
+
+```js
+const bigQuery = client.new({
+	credentials: {
+		project_id: 'test', 
+		location_id: 'australia-southeast1',
+		client_email:'something-1234@your-project-id.iam.gserviceaccount.com', 
+		private_key: '-----BEGIN PRIVATE KEY-----\n123456789-----END PRIVATE KEY-----\n'
+	}
+})
+```
+
+> All those details should be coming from the `service-account.json` you downloaded in the [Prerequisite](#prerequisite) step.
+
+### Using environment variables
+
+```js
+const bigQuery = client.new()
+```
+
+The above will only work if all the following environment variables are set:
+- `GOOGLE_CLOUD_BIGQUERY_PROJECT_ID` or `GOOGLE_CLOUD_PROJECT_ID`
+- `GOOGLE_CLOUD_BIGQUERY_LOCATION_ID` or `GOOGLE_CLOUD_LOCATION_ID`
+- `GOOGLE_CLOUD_BIGQUERY_CLIENT_EMAIL` or `GOOGLE_CLOUD_CLIENT_EMAIL`
+- `GOOGLE_CLOUD_BIGQUERY_PRIVATE_KEY` or `GOOGLE_CLOUD_PRIVATE_KEY`
+
+## Creating a new table
 
 ```js
 const { join } = require('path')
@@ -79,7 +123,7 @@ userTbl.exists()
 		}).then(() => console.log(`Table '${userTbl.name}' successfully added to DB '${db.name}'`)))
 ```
 
-### Inserting Data
+## Inserting data
 
 ```js
 userTbl.insert.values({ data:[{
@@ -112,7 +156,7 @@ userTbl.insert.values({ data:[{
 })
 ```
 
-#### IMPORTANT NOTE ABOUT QUOTAS AND LIMITS
+### IMPORTANT NOTE ABOUT QUOTAS AND LIMITS
 
 Notice that the `data` input accept both single objects or array of objects. Though BigQuery can ingest up to 10,000 rows per request and 100,000 rows per seconds, it is recommended to keep the maximum amount of rows per request to 500. You can read more about the quotas and limits at [https://cloud.google.com/bigquery/quotas#streaming_inserts](https://cloud.google.com/bigquery/quotas#streaming_inserts).
 
@@ -126,7 +170,7 @@ userTbl.insert.values({ data: lotsOfUsers, safeMode: true })
 This `safeMode` flag will check that there is less than 500 items in the _lotsOfUsers_ array. If there are more than 500 items, the array is broken down in batches of 500 items which are then inserted sequentially. That means that if you're inserting 5000 users, there will be 10 sequential request of 500 users.
 
 
-### Getting Data
+## Getting data
 
 ```js
 db.query.execute({ 
@@ -166,7 +210,7 @@ db.query.execute({
 
 ```
 
-### Updating The Table's Schema
+## Updating the table's schema
 
 With BigQuery, only 2 types of updates are possible:
 1. Adding new fields

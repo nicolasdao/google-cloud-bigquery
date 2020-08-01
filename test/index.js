@@ -14,7 +14,14 @@ describe('index', () => {
 		it('Should rename all number properties.', () => {
 			const getToken = () => Promise.resolve('123')
 			const insert = () => Promise.resolve(null)
-			const bigQuery = client.new({ jsonKeyFile: 'somepath', getToken, projectDetails: { project_id: 'test', location_id: 'test' } })
+			const bigQuery = client.new({ 
+				getToken, credentials: { 
+					client_email:'hello@email.com', 
+					project_id: 'test', 
+					location_id: 'test',
+					private_key: 'fake_key'
+				} 
+			})
 			const db = bigQuery.db.get('test-db')
 			return db.table('some-table').insert.values({
 				data: [{

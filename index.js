@@ -16,10 +16,6 @@ const TEN_MB = 10*1024*1024
 const DEFAULT_MAX_ROW_INSERT = 500
 
 const _getToken = auth => new Promise((onSuccess, onFailure) => auth.getToken((err, token) => err ? onFailure(err) : onSuccess(token)))
-const _validateRequiredParams = (params={}) => Object.keys(params).forEach(p => {
-	if (!params[p])
-		throw new Error(`Parameter '${p}' is required.`)
-})
 
 const _retryFn = (fn, options={}) => retry(
 	fn, 
@@ -36,26 +32,50 @@ const _throwHttpErrorIfBadStatus = res => Promise.resolve(null).then(() => {
 }) 
 
 /**
- * [description]
- * @param  {[type]} options.jsonKeyFile    [description]
- * @param  {[type]} options.getToken       Optional. Only used for unit test mocking
- * @param  {[type]} options.projectDetails Optional. Only used for unit test mocking
- * @return {[type]}                        [description]
+ * Creates a BigQuery client. 
+ * 
+ * @param  {String} 	jsonKeyFile    				Path to the service account JSON file.
+ * @param  {String} 	credentials.project_id    				
+ * @param  {String} 	credentials.client_email    				
+ * @param  {String} 	credentials.private_key
+ * @param  {String} 	credentials.location_id   				
+ * @param  {Function} 	getToken       				Optional. Only used for unit test mocking
+ * @return {String}
  */
-const createClient = ({ jsonKeyFile, getToken, projectDetails }) => {
-	_validateRequiredParams({ jsonKeyFile })
-	const { project_id:projectId, location_id } = projectDetails || require(jsonKeyFile)
+const createClient = ({ jsonKeyFile, credentials, getToken }) => {
+	const noCreds = !credentials
+	credentials = credentials || {}
+	let { project_id:projectId, location_id, client_email, private_key } = credentials || require(jsonKeyFile)
+	
+	projectId = projectId || process.env.GOOGLE_CLOUD_BIGQUERY_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT_ID
+	location_id = location_id || process.env.GOOGLE_CLOUD_BIGQUERY_LOCATION_ID || process.env.GOOGLE_CLOUD_LOCATION_ID
+	client_email = client_email || process.env.GOOGLE_CLOUD_BIGQUERY_CLIENT_EMAIL || process.env.GOOGLE_CLOUD_CLIENT_EMAIL
+	private_key = private_key || process.env.GOOGLE_CLOUD_BIGQUERY_PRIVATE_KEY || process.env.GOOGLE_CLOUD_PRIVATE_KEY
+
+	const errorHeader = !noCreds 
+		? 'The \'credentials\' argument is missing the required' 
+		: jsonKeyFile 
+			? `The service account JSON key file ${jsonKeyFile} is missing the required` 
+			: 'None of the available methods to pass credentials to the BigQuery client (i.e., \'credentials\' object, \'jsonKeyFile\' path or environment variables) define the required'
+
 	if (!projectId)
-		throw new Error(`The service account JSON key file ${jsonKeyFile} does not contain a 'project_id' field.`)
+		throw new Error(`${errorHeader} 'project_id' field.`)
 	if (!location_id)
-		throw new Error(`The service account JSON key file ${jsonKeyFile} does not contain a 'location_id' field.`)
+		throw new Error(`${errorHeader} 'location_id' field.`)
+	if (!client_email)
+		throw new Error(`${errorHeader} 'client_email' field.`)
+	if (!private_key)
+		throw new Error(`${errorHeader} 'private_key' field.`)
 
 	let __getToken
 	if (getToken)
 		__getToken = getToken
 	else {
 		const auth = googleAuth({ 
-			keyFilename: jsonKeyFile,
+			credentials: {
+				client_email,
+				private_key
+			},
 			scopes: ['https://www.googleapis.com/auth/cloud-platform']
 		})
 		__getToken = () => _getToken(auth)
