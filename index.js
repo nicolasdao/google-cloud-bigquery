@@ -34,15 +34,16 @@ const _throwHttpErrorIfBadStatus = res => Promise.resolve(null).then(() => {
 /**
  * Creates a BigQuery client. 
  * 
- * @param  {String} 	jsonKeyFile    				Path to the service account JSON file.
- * @param  {String} 	credentials.project_id    				
- * @param  {String} 	credentials.client_email    				
- * @param  {String} 	credentials.private_key
- * @param  {String} 	credentials.location_id   				
- * @param  {Function} 	getToken       				Optional. Only used for unit test mocking
+ * @param  {String} 	config.jsonKeyFile    				Path to the service account JSON file.
+ * @param  {String} 	config.credentials.project_id    				
+ * @param  {String} 	config.credentials.client_email    				
+ * @param  {String} 	config.credentials.private_key
+ * @param  {String} 	config.credentials.location_id   				
+ * @param  {Function} 	config.getToken       				Optional. Only used for unit test mocking
  * @return {String}
  */
-const createClient = ({ jsonKeyFile, credentials, getToken }) => {
+const createClient = config => {
+	const { jsonKeyFile, credentials, getToken } = config || {}
 	let { project_id:projectId, location_id, client_email, private_key } = credentials ? credentials : jsonKeyFile ? require(jsonKeyFile) : {}
 	
 	projectId = projectId || process.env.GOOGLE_CLOUD_BIGQUERY_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT_ID
