@@ -91,6 +91,8 @@ The above will only work if all the following environment variables are set:
 - `GOOGLE_CLOUD_BIGQUERY_CLIENT_EMAIL` or `GOOGLE_CLOUD_CLIENT_EMAIL`
 - `GOOGLE_CLOUD_BIGQUERY_PRIVATE_KEY` or `GOOGLE_CLOUD_PRIVATE_KEY`
 
+> WARNING: If you're using [NPM's `dotenv`](https://www.npmjs.com/package/dotenv), wrap your PRIVATE_KEY between double-quotes, otherwise some characters are escaped which corrupts the key.
+
 ## Creating a new table
 
 ```js
