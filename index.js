@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
 */
 
-const googleAuth = require('google-auto-auth')
+const { GoogleAuth } = require('google-auth-library')
 const bigQuery = require('./src')
 const { fitToSchema, fieldsToSchema } = require('./src/format')
 const { obj, promise: { retry } } = require('./utils')
@@ -14,8 +14,6 @@ const { obj, promise: { retry } } = require('./utils')
 const TWO_MB = 2*1024*1024
 const TEN_MB = 10*1024*1024
 const DEFAULT_MAX_ROW_INSERT = 500
-
-const _getToken = auth => new Promise((onSuccess, onFailure) => auth.getToken((err, token) => err ? onFailure(err) : onSuccess(token)))
 
 const _retryFn = (fn, options={}) => retry(
 	fn, 
@@ -51,34 +49,31 @@ const createClient = config => {
 	client_email = client_email || process.env.GOOGLE_CLOUD_BIGQUERY_CLIENT_EMAIL || process.env.GOOGLE_CLOUD_CLIENT_EMAIL
 	private_key = private_key || process.env.GOOGLE_CLOUD_BIGQUERY_PRIVATE_KEY || process.env.GOOGLE_CLOUD_PRIVATE_KEY
 
-	const errorHeader = credentials
-		? 'The \'credentials\' argument is missing the required' 
-		: jsonKeyFile 
-			? `The service account JSON key file ${jsonKeyFile} is missing the required` 
-			: 'None of the available methods to pass credentials to the BigQuery client (i.e., \'credentials\' object, \'jsonKeyFile\' path or environment variables) define the required'
+	const authConfig = {
+		scopes: ['https://www.googleapis.com/auth/cloud-platform']
+	}
 
-	if (!projectId)
-		throw new Error(`${errorHeader} 'project_id' field.`)
-	if (!location_id)
-		throw new Error(`${errorHeader} 'location_id' field.`)
-	if (!client_email)
-		throw new Error(`${errorHeader} 'client_email' field.`)
-	if (!private_key)
-		throw new Error(`${errorHeader} 'private_key' field.`)
+	if (client_email && private_key)
+		authConfig.credentials = { client_email, private_key }
+
+	const auth = new GoogleAuth(authConfig)
+
+	const getProjectId = () => Promise.resolve(null)
+		.then(() => projectId ? projectId : auth.getProjectId())
+		.then(id => {
+			if (!id)
+				throw new Error('Missing required \'projectId\'. The \'projectId\' was not defined explicitly nor was it found in the application default credentials.')
+			if (!projectId)
+				projectId = id 
+
+			return id
+		})
 
 	let __getToken
 	if (getToken)
 		__getToken = getToken
-	else {
-		const auth = googleAuth({ 
-			credentials: {
-				client_email,
-				private_key
-			},
-			scopes: ['https://www.googleapis.com/auth/cloud-platform']
-		})
-		__getToken = () => _getToken(auth)
-	}
+	else
+		__getToken = () => auth.getAccessToken()
 
 	/**
 	 * [description]
@@ -140,8 +135,8 @@ const createClient = config => {
 					name: db,
 					table: (table) => ({
 						name: table,
-						'get': () => __getToken().then(token => bigQuery.table.get(projectId, db, table, token)).then(({ data }) => data),
-						'exists': () => __getToken().then(token => bigQuery.table.get(projectId, db, table, token)).then(({ status, data }) =>{
+						'get': () => __getToken().then(token => getProjectId().then(_projectId => bigQuery.table.get(_projectId, db, table, token))).then(({ data }) => data),
+						'exists': () => __getToken().then(token => getProjectId().then(_projectId => bigQuery.table.get(_projectId, db, table, token))).then(({ status, data }) =>{
 							if (status >= 200 && status < 300)
 								return true
 							else if (status == 404)
@@ -154,7 +149,7 @@ const createClient = config => {
 							}
 						}),
 						insert: {
-							fromStorage: ({ sources=[] }) => __getToken().then(token => bigQuery.table.loadData(projectId, db, table, sources, token)),
+							fromStorage: ({ sources=[] }) => __getToken().then(token => getProjectId().then(_projectId => bigQuery.table.loadData(_projectId, db, table, sources, token))),
 							/**
 							 * [description]
 							 * @param  {[type]}  data            			[description]
@@ -172,7 +167,7 @@ const createClient = config => {
 								const d = Array.isArray(data) ? data : [data]
 								const dd = forcedSchema ? d.map(x => fitToSchema(x,forcedSchema)) : d
 								const _insert = insert || _retryInsert
-								return _insert(projectId, db, table, dd, token, { templateSuffix, skipInvalidRows, safeMode, timeout, batchSize, batchCount }).then(res => {
+								return getProjectId().then(_projectId => _insert(_projectId, db, table, dd, token, { templateSuffix, skipInvalidRows, safeMode, timeout, batchSize, batchCount })).then(res => {
 									res = res || {}
 									res.payload = dd
 									return res
@@ -180,11 +175,11 @@ const createClient = config => {
 							}).then(_throwHttpErrorIfBadStatus)
 						},
 						create: {
-							new: ({ schema={} }) => __getToken().then(token => bigQuery.table.create(projectId, db, table, schema, token)).then(({ data }) => data),
-							fromStorage: ({ sources=[] }) => __getToken().then(token => bigQuery.table.createFromStorage(projectId, db, table, sources, token)).then(({ data }) => data)
+							new: ({ schema={} }) => __getToken().then(token => getProjectId().then(_projectId => bigQuery.table.create(_projectId, db, table, schema, token))).then(({ data }) => data),
+							fromStorage: ({ sources=[] }) => __getToken().then(token => getProjectId().then(_projectId => bigQuery.table.createFromStorage(_projectId, db, table, sources, token))).then(({ data }) => data)
 						},
 						schema: {
-							isDiff: (schema) => __getToken().then(token => bigQuery.table.get(projectId, db, table, token)).then(({ data }) => {
+							isDiff: (schema) => __getToken().then(token => getProjectId().then(_projectId => bigQuery.table.get(_projectId, db, table, token))).then(({ data }) => {
 								if (!schema)
 									throw new Error('Missing required \'schema\' argument.')
 								if (Object.keys(schema).length == 0)
@@ -196,18 +191,18 @@ const createClient = config => {
 								const currentSchema = fieldsToSchema(data.schema.fields)
 								return !obj.same(schema, currentSchema)
 							}),
-							update: (schema) => __getToken().then(token => bigQuery.table.update(projectId, db, table, schema, token)).then(({ data }) => data)
+							update: (schema) => __getToken().then(token => getProjectId().then(_projectId => bigQuery.table.update(_projectId, db, table, schema, token))).then(({ data }) => data)
 						}
 					}),
 					query: {
 						execute: ({ sql, params, pageSize=1000, timeout=10000, useLegacySql=false }) => __getToken()
 							.then(token => _retryFn(
-								() => bigQuery.query.execute(projectId, location_id, sql, params, token, { pageSize, timeout, useLegacySql }),
+								() => getProjectId().then(_projectId => bigQuery.query.execute(_projectId, location_id, sql, params, token, { pageSize, timeout, useLegacySql })),
 								{ timeout }))
 							.then(_throwHttpErrorIfBadStatus)
 							.then(({ data }) => data)
 					},
-					exists: () => __getToken().then(token => bigQuery.db.get(projectId, db, token)).then(({ status, data }) =>{
+					exists: () => __getToken().then(token => getProjectId().then(_projectId => bigQuery.db.get(_projectId, db, token))).then(({ status, data }) =>{
 						if (status >= 200 && status < 300)
 							return true
 						else if (status == 404)
@@ -223,7 +218,7 @@ const createClient = config => {
 			}
 		},
 		job: {
-			'get': ({ jobId }) => __getToken().then(token => bigQuery.job.get(projectId, location_id, jobId, token))
+			'get': ({ jobId }) => __getToken().then(token => getProjectId().then(_projectId => bigQuery.job.get(_projectId, location_id, jobId, token)))
 		}
 	}
 }

@@ -6,7 +6,11 @@ __*Google Cloud BigQuery*__ is a node.js package to maintain BigQuery table, eit
 > * [Install](#install) 
 > * [Getting started](#getting-started) 
 >	- [Prerequisite](#prerequisite)
->	- [Creating a client](#creating-a-client)
+>	- [Four ways to create a client](#four-ways-to-create-a-client)
+>		- [User the hosting identity](#user-the-hosting-identity)
+>		- [Using a `service-account.json`](#using-a-service-accountjson)
+>		- [Using explicit credentials](#using-explicit-credentials)
+>		- [Using environment variables](#using-environment-variables)
 >	- [Creating a new table](#creating-a-new-table)
 >	- [Inserting data](#inserting-data)
 >	- [Getting data](#getting-data)
@@ -48,14 +52,42 @@ Before using this package, you must first:
 	- `private_key`
 6. Modify the `service-account.json` above by adding a new `location_id` property with the location ID of your BigQuery service (e.g., `australia-southeast1`).
 
-## Creating a client
+## Four ways to create a client
 
-There are three different ways to create a client:
-1. [Using the `service-account.json`](#using-the-service-accountjson)
-2. [Using the service account's credentials explicitly](#using-the-service-accounts-credentials-explicitly)
-3. [Using environment variables](#using-environment-variables)
+This library supports four different ways to create a client. The first method is the recommended way:
+1. [User the hosting identity](#user-the-hosting-identity)
+2. [Using a `service-account.json`](#using-a-service-accountjson)
+3. [Using explicit credentials](#using-explicit-credentials)
+4. [Using environment variables](#using-environment-variables)
 
-### Using the `service-account.json`
+### User the hosting identity
+
+```js
+const { client } = require('google-cloud-bigquery')
+
+const bigQuery = client.new()
+```
+
+In this case, the package fetches the credentials automatically. It will try three different techniques to get those data, and if none of them work, an error is thrown. Those techniques are:
+1. If the code is hosted on GCP (e.g., Cloud Compute, App Engine, Cloud Function or Cloud Run) then the credentials are extracted from the service account associated with the GCP service.
+2. If the `GOOGLE_APPLICATION_CREDENTIALS` environment variable exists, its value is supposed to be the path to a service account JSON key file on the hosting machine.
+3. If the `~/.config/gcloud/application_default_credentials.json` file exists, then the credentials it contains are used (more about setting that file up below).
+
+When developing on your local environment, use either #2 or #3. #3 is equivalent to being invited by the SysAdmin to the project and granted specific privileges. To set up `~/.config/gcloud/application_default_credentials.json`, follow those steps:
+
+- Make sure you have a Google account that can access both the GCP project and the resources you need on GCP. 
+- Install the `GCloud CLI` on your environment.
+- Execute the following commands:
+	```
+	gcloud auth login
+	gcloud config set project <YOUR_GCP_PROJECT_HERE>
+	gcloud auth application-default login
+	```
+	The first command logs you in. The second command sets the `<YOUR_GCP_PROJECT_HERE>` as your default project. Finally, the third command creates a new `~/.config/gcloud/application_default_credentials.json` file with the credentials you need for the `<YOUR_GCP_PROJECT_HERE>` project.
+
+### Using a `service-account.json`
+
+We assume that you have created a Service Account in your Google Cloud Account (using IAM) and that you've downloaded a `service-account.json` (the name of the file does not matter as long as it is a valid json file). The first way to create a client is to provide the path to that `service-account.json` as shown in the following example:
 
 ```js
 const { join } = require('path')
@@ -64,9 +96,14 @@ const { client } = require('google-cloud-bigquery')
 const bigQuery = client.new({ jsonKeyFile: join(__dirname, './service-account.json') })
 ```
 
-### Using the service account's credentials explicitly
+
+### Using explicit credentials
+
+This method is similar to the previous one. You should have dowloaded a `service-account.json`, but instead of providing its path, you provide some of its details explicitly:
 
 ```js
+const { client } = require('google-cloud-bigquery')
+
 const bigQuery = client.new({
 	credentials: {
 		project_id: 'test', 
@@ -82,6 +119,8 @@ const bigQuery = client.new({
 ### Using environment variables
 
 ```js
+const { client } = require('google-cloud-bigquery')
+
 const bigQuery = client.new()
 ```
 

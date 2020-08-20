@@ -32,12 +32,12 @@
   "devDependencies": {
     "chai": "^4.1.2",
     "eslint": "^4.19.1",
-    "mocha": "^8.0.1",
-    "standard-version": "^8.0.2"
+    "mocha": "^8.1.1",
+    "standard-version": "^9.0.0"
   },
   "dependencies": {
     "functional": "^1.0.0",
-    "google-auto-auth": "^0.10.1",
+    "google-auth-library": "^6.0.6",
     "node-fetch": "^2.2.0",
     "shortid": "^2.2.13"
   }
