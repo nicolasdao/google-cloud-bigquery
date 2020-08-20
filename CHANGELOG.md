@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.0.0](https://github.com/nicolasdao/google-cloud-bigquery/compare/v0.5.2...v1.0.0) (2020-08-20)
+
+
+### Features
+
+* Add support for using the application default credentials ([cd3693c](https://github.com/nicolasdao/google-cloud-bigquery/commit/cd3693c3388a5638752f2094a1adc78724aa01a2))
+
 ### [0.5.2](https://github.com/nicolasdao/google-cloud-bigquery/compare/v0.5.1...v0.5.2) (2020-08-01)
 
 
